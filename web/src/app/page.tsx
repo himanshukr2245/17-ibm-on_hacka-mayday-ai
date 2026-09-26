@@ -282,6 +282,58 @@ export default function MaydayWarRoom() {
     setDetectives(currentIncident.detectives);
   };
 
+  // Live Machine Vitest Runner State
+  const [liveTestRunning, setLiveTestRunning] = useState(false);
+  const [liveTestOutput, setLiveTestOutput] = useState<string | null>(null);
+  const [liveTestPassed, setLiveTestPassed] = useState<boolean | null>(null);
+  const [isHealing, setIsHealing] = useState(false);
+
+  const runLiveTests = async () => {
+    setLiveTestRunning(true);
+    sounds.playTerminalClick();
+    try {
+      const res = await fetch('/api/run-tests', { method: 'POST' });
+      const data = await res.json();
+      setLiveTestOutput(data.output);
+      setLiveTestPassed(data.success);
+      if (data.success) {
+        sounds.playGreenChime();
+      } else {
+        sounds.playTestFailure();
+      }
+    } catch (err: any) {
+      setLiveTestOutput('Failed to execute test API: ' + err.message);
+      setLiveTestPassed(false);
+      sounds.playTestFailure();
+    } finally {
+      setLiveTestRunning(false);
+    }
+  };
+
+  const triggerHeal = async (action: 'break' | 'fix') => {
+    setIsHealing(true);
+    sounds.playTerminalClick();
+    try {
+      const res = await fetch('/api/heal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      setLiveTestOutput(data.output);
+      setLiveTestPassed(data.testsPassed);
+      if (data.testsPassed) {
+        sounds.playGreenChime();
+      } else {
+        sounds.playTestFailure();
+      }
+    } catch (err: any) {
+      setLiveTestOutput('Failed to toggle healing: ' + err.message);
+    } finally {
+      setIsHealing(false);
+    }
+  };
+
   // Timer loop
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -350,28 +402,14 @@ export default function MaydayWarRoom() {
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-sans selection:bg-red-500/30 selection:text-white">
-      {/* Top Banner: Incident Alert */}
-      <header className="border-b border-slate-800/80 bg-[#0d121d]/90 backdrop-blur-md sticky top-0 z-50 px-6 py-3.5 flex items-center justify-between shadow-2xl">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 animate-pulse">
-              <ShieldAlert className="w-5 h-5" />
+      {/* Incident Sub-Bar & Live Controls */}
+      <div className="border-b border-slate-800/80 bg-[#0d121d]/80 backdrop-blur-md px-6 py-2.5 flex flex-wrap items-center justify-between gap-4 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className="text-slate-400">Target Service:</span>
+            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 font-bold border border-slate-700">
+              {currentIncident.target}
             </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold tracking-wider text-white text-lg flex items-center gap-1.5">
-                  MAYDAY <span className="text-xs px-2 py-0.5 rounded font-mono font-semibold bg-red-500/20 text-red-400 border border-red-500/30">WAR ROOM</span>
-                </span>
-                <span className="text-xs text-slate-400 hidden sm:inline">| Autonomous Incident Commander</span>
-              </div>
-              <div className="text-[11px] font-mono text-slate-400 flex items-center gap-2">
-                <span>Target: <span className="text-slate-200">{currentIncident.target}</span></span>
-                <span>•</span>
-                <span className="text-blue-400 font-semibold flex items-center gap-1">
-                  <Cpu className="w-3 h-3" /> Powered by IBM Bob 2.0
-                </span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -455,7 +493,7 @@ export default function MaydayWarRoom() {
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main War Room Body */}
       <main className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
@@ -737,20 +775,78 @@ export default function MaydayWarRoom() {
             </div>
           )}
 
-          {/* Tab 3: Vitest Logs */}
+          {/* Tab 3: Interactive Live Vitest Runner */}
           {activeTab === 'tests' && (
-            <div className="p-6 font-mono text-xs bg-[#07090e]">
-              <div className="text-slate-400 pb-2 border-b border-slate-800 mb-3 flex items-center justify-between">
-                <span>Test Runner: <span className="text-white">vitest v1.6.1</span></span>
-                <span className="text-emerald-400">✓ Invariant Tests Passing</span>
-              </div>
-              <div className="space-y-1.5 text-slate-300">
-                {currentIncident.tests.map((t, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="text-emerald-400 font-bold">{t.name}</div>
-                    <div className="text-slate-400 pl-4">{t.detail}</div>
+            <div className="p-6 font-mono text-xs bg-[#07090e] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-emerald-400" />
+                    <span className="font-bold text-white text-sm">Real Machine Vitest Execution Console</span>
                   </div>
-                ))}
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Direct execution via Node.js child_process against <code className="text-slate-200">targets/shopfront</code>.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => triggerHeal('break')}
+                    disabled={isHealing}
+                    className="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/50 text-red-300 border border-red-500/40 font-semibold transition flex items-center gap-1.5"
+                  >
+                    <span>💣 Break Code</span>
+                  </button>
+
+                  <button
+                    onClick={() => triggerHeal('fix')}
+                    disabled={isHealing}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-500/40 font-semibold transition flex items-center gap-1.5"
+                  >
+                    <span>🩹 Self-Heal</span>
+                  </button>
+
+                  <button
+                    onClick={runLiveTests}
+                    disabled={liveTestRunning}
+                    className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition flex items-center gap-1.5 shadow-lg shadow-blue-600/30"
+                  >
+                    {liveTestRunning ? (
+                      <>
+                        <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Running Tests...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Run Live Vitest</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Console Output Window */}
+              <div className="bg-black/90 rounded-xl p-4 border border-slate-800 font-mono text-[11px] min-h-[180px] overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                {liveTestOutput ? (
+                  <div className={liveTestPassed ? 'text-emerald-400' : 'text-red-400'}>
+                    {liveTestOutput}
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-slate-500">
+                    <div className="text-slate-400 font-bold"># Pre-loaded golden verification results:</div>
+                    {currentIncident.tests.map((t, idx) => (
+                      <div key={idx} className="space-y-0.5">
+                        <div className="text-emerald-400 font-bold">{t.name}</div>
+                        <div className="text-slate-400 pl-4">{t.detail}</div>
+                      </div>
+                    ))}
+                    <div className="pt-2 text-blue-400 flex items-center gap-2">
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Click <strong>"Run Live Vitest"</strong> above to execute the real test suite on your computer!</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
