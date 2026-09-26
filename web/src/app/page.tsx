@@ -38,11 +38,14 @@ import {
   HardDrive,
   TrendingDown,
   CheckCheck,
+  Wrench,
 } from 'lucide-react';
 import { sounds } from '../lib/audio';
 import { callHealAPI, callRunTestsAPI, DEMO_MODE } from '../lib/demoMode';
 import { useTypewriter } from '../lib/typewriter';
 import { saveIncidentToLocal } from '../db/local';
+import LiveCustomStudio from '../components/studio/LiveCustomStudio';
+import HowItWorksBanner from '../components/common/HowItWorksBanner';
 
 function TypewriterText({ text }: { text: string }) {
   const displayed = useTypewriter(text, 14);
@@ -721,6 +724,7 @@ export default function MaydayWarRoom() {
   const [confetti, setConfetti] = useState<{ id: number; x: number; y: number; color: string }[]>([]);
   const [activeTab, setActiveTab] = useState<'matrix' | 'diff' | 'tests' | 'postmortem'>('matrix');
   const [selectedIncident, setSelectedIncident] = useState<'A' | 'B' | 'C' | 'D'>('A');
+  const [appMode, setAppMode] = useState<'DEMO' | 'REAL'>('DEMO');
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   // 🚀 30-Second Autopilot Tour state
@@ -779,6 +783,10 @@ export default function MaydayWarRoom() {
       const incParam = params.get('incident') as 'A' | 'B' | 'C' | 'D' | null;
       if (incParam && ['A', 'B', 'C', 'D'].includes(incParam)) {
         switchIncident(incParam);
+      }
+      const modeParam = params.get('mode');
+      if (modeParam === 'real' || modeParam === 'REAL') {
+        setAppMode('REAL');
       }
       if (params.get('autoplay') === 'true') {
         const id = setTimeout(() => {
@@ -1428,8 +1436,110 @@ ${currentIncident.postmortem.rejectionReason}
       </header>
 
       {/* ========================================================================= */}
-      {/* ⚡ ZONE 2: THE INTERACTIVE SYSTEM LOGIC PIPELINE (ANIMATED FLOW MAP)      */}
+      {/* 🎛️ GLOBAL MODE SWITCHER & 3 AM ARCHITECTURE ROADMAP                      */}
       {/* ========================================================================= */}
+      <section className="max-w-7xl mx-auto w-full px-6 pt-6 space-y-4">
+        {/* Dual Mode Switcher Bar */}
+        <div className="bg-[#0a0e17] border border-slate-800 rounded-2xl p-2 shadow-2xl flex flex-col sm:flex-row gap-2">
+          {/* Option 1: Guided Demo Showcase */}
+          <button
+            onClick={() => {
+              setAppMode('DEMO');
+              if (soundEnabled) sounds.playTerminalClick();
+            }}
+            className={`flex-1 p-3.5 rounded-xl border text-left transition relative flex items-center justify-between group ${
+              appMode === 'DEMO'
+                ? 'bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-blue-950/40 border-blue-500 shadow-xl shadow-blue-500/10 ring-1 ring-blue-500/50'
+                : 'bg-slate-900/40 border-slate-800/80 hover:bg-slate-800/40 hover:border-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2.5 rounded-xl border transition ${
+                  appMode === 'DEMO'
+                    ? 'bg-blue-500/20 border-blue-500/40 text-blue-400'
+                    : 'bg-slate-800 border-slate-700 text-slate-400 group-hover:text-slate-200'
+                }`}
+              >
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-white tracking-wide">
+                    🎮 GUIDED DEMO SHOWCASE
+                  </span>
+                  {appMode === 'DEMO' && (
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-blue-500 text-white font-black uppercase">
+                      ACTIVE
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  4 Curated Golden Incidents (A–D) • Step-by-step forensic playback &amp; audio
+                </div>
+              </div>
+            </div>
+          </button>
+
+          {/* Option 2: Live Custom Studio */}
+          <button
+            onClick={() => {
+              setAppMode('REAL');
+              if (soundEnabled) sounds.playTerminalClick();
+            }}
+            className={`flex-1 p-3.5 rounded-xl border text-left transition relative flex items-center justify-between group ${
+              appMode === 'REAL'
+                ? 'bg-gradient-to-r from-emerald-900/40 via-teal-900/30 to-emerald-950/40 border-emerald-500 shadow-xl shadow-emerald-500/10 ring-1 ring-emerald-500/50'
+                : 'bg-slate-900/40 border-slate-800/80 hover:bg-slate-800/40 hover:border-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2.5 rounded-xl border transition ${
+                  appMode === 'REAL'
+                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                    : 'bg-slate-800 border-slate-700 text-slate-400 group-hover:text-slate-200'
+                }`}
+              >
+                <Wrench className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-white tracking-wide">
+                    ⚡ LIVE CUSTOM STUDIO (REAL)
+                  </span>
+                  {appMode === 'REAL' && (
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500 text-white font-black uppercase">
+                      ACTIVE
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  Physical disk mutation on shopfront • Live Vitest terminal • Paste custom stack traces
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* 3 AM Architecture Explainer Roadmap */}
+        <HowItWorksBanner />
+      </section>
+
+      {/* Conditionally Render Mode */}
+      {appMode === 'REAL' ? (
+        <section className="max-w-7xl mx-auto w-full px-6 pt-6">
+          <LiveCustomStudio
+            soundEnabled={soundEnabled}
+            diskStatus={diskStatus}
+            onDiskStatusChange={checkLiveDiskStatus}
+          />
+        </section>
+      ) : (
+        <>
+          {/* ========================================================================= */}
+          {/* ⚡ ZONE 2: THE INTERACTIVE SYSTEM LOGIC PIPELINE (ANIMATED FLOW MAP)      */}
+          {/* ========================================================================= */}
       <section className="max-w-7xl mx-auto w-full px-6 pt-6">
         <div className="bg-[#0b0f19] border border-slate-800/90 rounded-2xl p-5 shadow-2xl">
           <div className="flex items-center justify-between mb-4">
@@ -2543,6 +2653,8 @@ ${currentIncident.postmortem.rejectionReason}
           )}
         </div>
       </section>
+        </>
+      )}
 
       {/* Footer Strip */}
       <footer className="mt-12 border-t border-slate-800/80 bg-[#07090e] px-6 py-4 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3 max-w-7xl mx-auto w-full">

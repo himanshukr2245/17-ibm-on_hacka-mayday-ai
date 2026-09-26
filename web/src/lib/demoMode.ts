@@ -63,6 +63,7 @@ export interface HealResult {
   };
   message?: string;
   error?: string;
+  mode?: string;
 }
 
 function delay(ms: number) {
@@ -73,10 +74,10 @@ export async function callHealAPI(action: 'break' | 'fix' | 'status' | 'reset-al
   if (DEMO_MODE) {
     await delay(600 + Math.random() * 400);
     if (action === 'status') {
-      return { success: true, currentStatus: { incidentA: { status: 'HEALTHY_PATCHED', file: 'targets/shopfront/src/payment/adapter.ts', isFixed: true }, incidentB: { status: 'HEALTHY_PATCHED', file: 'targets/shopfront/src/inventory/service.ts', isFixed: true } } };
+      return { success: true, mode: 'CLOUDFLARE_EDGE_SIMULATION', currentStatus: { incidentA: { status: 'HEALTHY_PATCHED', file: 'targets/shopfront/src/payment/adapter.ts', isFixed: true }, incidentB: { status: 'HEALTHY_PATCHED', file: 'targets/shopfront/src/inventory/service.ts', isFixed: true } } };
     }
     if (action === 'reset-all' || target === 'all') {
-      return { success: true, message: 'All targets restored to healthy state (demo mode)', currentStatus: { incidentA: { status: 'HEALTHY_PATCHED', file: 'targets/shopfront/src/payment/adapter.ts', isFixed: true }, incidentB: { status: 'HEALTHY_PATCHED', file: 'targets/shopfront/src/inventory/service.ts', isFixed: true } } };
+      return { success: true, mode: 'CLOUDFLARE_EDGE_SIMULATION', message: 'All targets restored to healthy state (demo mode)', currentStatus: { incidentA: { status: 'HEALTHY_PATCHED', file: 'targets/shopfront/src/payment/adapter.ts', isFixed: true }, incidentB: { status: 'HEALTHY_PATCHED', file: 'targets/shopfront/src/inventory/service.ts', isFixed: true } } };
     }
     const isFixed = action === 'fix';
     const output = isFixed ? FAKE_FIX_OUTPUT[target] ?? FAKE_FIX_OUTPUT['incident-a'] : FAKE_BREAK_OUTPUT[target] ?? FAKE_BREAK_OUTPUT['incident-a'];
@@ -84,6 +85,7 @@ export async function callHealAPI(action: 'break' | 'fix' | 'status' | 'reset-al
     const incidentBFixed = target === 'incident-b' ? isFixed : true;
     return {
       success: true,
+      mode: 'CLOUDFLARE_EDGE_SIMULATION',
       testsPassed: isFixed,
       output,
       currentStatus: {
@@ -104,10 +106,10 @@ export async function callHealAPI(action: 'break' | 'fix' | 'status' | 'reset-al
   return res.json();
 }
 
-export async function callRunTestsAPI(): Promise<{ success: boolean; output: string; testsPassed: number; durationMs: number }> {
+export async function callRunTestsAPI(): Promise<{ success: boolean; output: string; testsPassed: number; durationMs: number; mode?: string }> {
   if (DEMO_MODE) {
     await delay(1000 + Math.random() * 500);
-    return { success: true, output: `✓ test/checkout.test.ts (1 test) 38ms\n✓ test/inventory.test.ts (1 test) 315ms\n\nTest Files  2 passed (2)\nTests  2 passed (2)\nDuration  1.2s`, testsPassed: 2, durationMs: 1200 };
+    return { success: true, mode: 'CLOUDFLARE_EDGE_SIMULATION', output: `✓ test/checkout.test.ts (1 test) 38ms\n✓ test/inventory.test.ts (1 test) 315ms\n\nTest Files  2 passed (2)\nTests  2 passed (2)\nDuration  1.2s`, testsPassed: 2, durationMs: 1200 };
   }
   const headers: Record<string, string> = {};
   if (DEMO_KEY) headers['x-demo-key'] = DEMO_KEY;
