@@ -32,10 +32,9 @@ export async function rawPaylinkGatewayCall(amountDollars: number) {
 export async function processPayment(req: ChargeRequest): Promise<ChargeResponse> {
   const gatewayRaw = await rawPaylinkGatewayCall(req.amountDollars);
 
-  // BUG (Incident A): Legacy code expects gatewayRaw.fee.amount!
-  // In v3.0, gatewayRaw.fee is undefined, so reading .amount throws:
-  // TypeError: Cannot read properties of undefined (reading 'amount')
-  const fee = (gatewayRaw as any).fee.amount; 
+  // FIX (INC-2041): PayLink SDK v3.0 renamed fee.amount → data.feeCents.
+  // Convert integer cents to dollars to preserve the 2.9% fee invariant.
+  const fee = gatewayRaw.data.feeCents / 100;
 
   const total = req.amountDollars + fee;
 

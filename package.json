@@ -1,0 +1,22 @@
+{
+  "name": "mayday-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MAYDAY: Autonomous Incident Commander powered by IBM Bob 2.0 (Team SITA)",
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "dev:clean": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "start": "npm --prefix web run start",
+    "test": "npm --prefix targets/shopfront test"
+  },
+  "keywords": [
+    "ibm-bob-2.0",
+    "autonomous-agents",
+    "incident-response",
+    "nextjs",
+    "developer-workflow"
+  ],
+  "author": "Team SITA (Himanshu Kumar & Priyansu Modi)",
+  "license": "MIT"
+}
