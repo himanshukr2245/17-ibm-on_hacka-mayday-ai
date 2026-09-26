@@ -382,6 +382,7 @@ export default function MaydayLandingPage() {
             <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/studio"
+                prefetch={false}
                 className="px-5 py-3 rounded-xl font-mono text-xs sm:text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 shadow-xl shadow-blue-600/30 transition flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Wrench className="w-4 h-4" />
@@ -390,6 +391,7 @@ export default function MaydayLandingPage() {
 
               <Link
                 href="/war-room"
+                prefetch={false}
                 className="px-5 py-3 rounded-xl font-mono text-xs sm:text-sm font-bold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 transition flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Flame className="w-4 h-4 text-red-400" />
@@ -1087,6 +1089,7 @@ export default function MaydayLandingPage() {
                 </p>
                 <Link
                   href="/studio"
+                  prefetch={false}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition text-xs shadow-lg shadow-blue-600/30"
                 >
                   <Wrench className="w-4 h-4" />
@@ -1177,6 +1180,7 @@ export default function MaydayLandingPage() {
           {/* Card 1: Studio */}
           <Link
             href="/studio"
+            prefetch={false}
             className="group rounded-2xl p-5 bg-[#0d121d] border border-slate-800 hover:border-blue-500 transition-all duration-300 flex flex-col justify-between hover:scale-[1.02] shadow-xl"
           >
             <div>
@@ -1204,6 +1208,7 @@ export default function MaydayLandingPage() {
           {/* Card 2: War Room */}
           <Link
             href="/war-room"
+            prefetch={false}
             className="group rounded-2xl p-5 bg-[#0d121d] border border-slate-800 hover:border-red-500 transition-all duration-300 flex flex-col justify-between hover:scale-[1.02] shadow-xl"
           >
             <div>
@@ -1231,6 +1236,7 @@ export default function MaydayLandingPage() {
           {/* Card 3: Matrix */}
           <Link
             href="/matrix"
+            prefetch={false}
             className="group rounded-2xl p-5 bg-[#0d121d] border border-slate-800 hover:border-purple-500 transition-all duration-300 flex flex-col justify-between hover:scale-[1.02] shadow-xl"
           >
             <div>
@@ -1258,6 +1264,7 @@ export default function MaydayLandingPage() {
           {/* Card 4: Bobalytics */}
           <Link
             href="/bobalytics"
+            prefetch={false}
             className="group rounded-2xl p-5 bg-[#0d121d] border border-slate-800 hover:border-amber-500 transition-all duration-300 flex flex-col justify-between hover:scale-[1.02] shadow-xl"
           >
             <div>
@@ -1285,6 +1292,7 @@ export default function MaydayLandingPage() {
           {/* Card 5: Simulator */}
           <Link
             href="/simulator"
+            prefetch={false}
             className="group rounded-2xl p-5 bg-[#0d121d] border border-slate-800 hover:border-emerald-500 transition-all duration-300 flex flex-col justify-between hover:scale-[1.02] shadow-xl"
           >
             <div>
@@ -1312,6 +1320,7 @@ export default function MaydayLandingPage() {
           {/* Card 6: Postmortem */}
           <Link
             href="/postmortem"
+            prefetch={false}
             className="group rounded-2xl p-5 bg-[#0d121d] border border-slate-800 hover:border-cyan-500 transition-all duration-300 flex flex-col justify-between hover:scale-[1.02] shadow-xl"
           >
             <div>

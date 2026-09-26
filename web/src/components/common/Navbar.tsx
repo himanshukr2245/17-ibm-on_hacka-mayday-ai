@@ -136,6 +136,7 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={() => { sounds.playTerminalClick(); setMobileOpen(false); }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition ${
                   isActive
@@ -203,6 +204,7 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={() => { setMobileOpen(false); sounds.playTerminalClick(); }}
                 className={`flex items-center gap-3 px-6 py-3.5 text-sm border-b border-slate-800/50 transition ${
                   isActive
