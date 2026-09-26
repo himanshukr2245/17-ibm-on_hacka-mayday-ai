@@ -8,6 +8,8 @@ const inventoryDb: Record<string, number> = {
 
 export function resetInventory(sku: string, initialStock: number) {
   inventoryDb[sku] = initialStock;
+  // Clear any pending queue tail for this SKU so tests start fresh
+  skuQueue.delete(sku);
 }
 
 export function getCurrentStock(sku: string): number {
@@ -15,29 +17,40 @@ export function getCurrentStock(sku: string): number {
 }
 
 /**
- * Reserves inventory for a checkout request.
- * 
- * BUG (Incident B - INC-2042): Check-then-act concurrency race condition!
- * A recent commit replaced serial checkout with concurrent batching.
- * Between reading `currentStock` and decrementing it, an asynchronous I/O delay
- * allows concurrent requests to interleave, resulting in ghost 500 errors and negative stock.
+ * Per-SKU async mutex: maps each SKU to the tail of its serialised promise chain.
+ * Every new reservation atomically appends itself to the chain so that concurrent
+ * calls are queued and execute one-at-a-time per SKU, eliminating the
+ * check-then-act race condition that caused INC-2042.
  */
+const skuQueue = new Map<string, Promise<unknown>>();
+
 export async function reserveStock(
-  sku: string, 
+  sku: string,
   qty: number
 ): Promise<{ success: boolean; remaining: number }> {
-  // 1. Check current stock
-  const currentStock = inventoryDb[sku] ?? 0;
+  // Grab the current tail (or a resolved promise if the queue is empty)
+  const tail = skuQueue.get(sku) ?? Promise.resolve();
 
-  // Simulated async database / remote storage latency gap (10ms)
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  // Build the next task: wait for the previous one, then run our critical section
+  const next = tail.then(async () => {
+    // 1. Read stock – now guaranteed to see all previous writes for this SKU
+    const currentStock = inventoryDb[sku] ?? 0;
 
-  // 2. Validate availability
-  if (currentStock < qty) {
-    return { success: false, remaining: currentStock };
-  }
+    // Simulated async database / remote storage latency gap (10ms)
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
-  // 3. Decrement stock (RACE: Multiple requests reach here with stale currentStock)
-  inventoryDb[sku] = currentStock - qty;
-  return { success: true, remaining: inventoryDb[sku] };
+    // 2. Validate availability
+    if (currentStock < qty) {
+      return { success: false, remaining: currentStock };
+    }
+
+    // 3. Decrement stock – no concurrent request can interleave here
+    inventoryDb[sku] = currentStock - qty;
+    return { success: true, remaining: inventoryDb[sku] };
+  });
+
+  // Advance the tail; swallow errors so a failed reservation never stalls the queue
+  skuQueue.set(sku, next.catch(() => {}));
+
+  return next;
 }
