@@ -1,0 +1,39 @@
+# ============================================
+# BOB AI ASSISTANT - SECURITY IGNORE PATTERNS
+# ============================================
+# Prevents Bob from logging credentials in session history
+# DO NOT REMOVE OR MODIFY THESE PATTERNS
+# ============================================
+
+# IBM Cloud API Keys
+*IBM_CLOUD_API_KEY*
+*ibm_cloud_api_key*
+*IBMCLOUD_API_KEY*
+*apikey*
+*api-key*
+*api_key*
+
+# Watson Service Credentials
+*WATSON_*_API_KEY*
+*watson_*_api_key*
+*WATSON_*_URL*
+*ASSISTANT_API_KEY*
+*DISCOVERY_API_KEY*
+
+# Generic Credentials
+*API_KEY*
+*api_key*
+*ACCESS_TOKEN*
+*access_token*
+*SECRET_KEY*
+*secret_key*
+*PASSWORD*
+*pass*
+
+# Secrets & Environment Files
+.env
+.env.*
+node_modules/
+.next/
+dist/
+build/

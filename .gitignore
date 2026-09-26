@@ -1,0 +1,50 @@
+# ============================================
+# IBM HACKATHON - ROOT .GITIGNORE
+# ============================================
+
+# Dependencies
+**/node_modules/
+node_modules/
+
+# Next.js & Build Outputs
+**/.next/
+.next/
+**/dist/
+dist/
+**/build/
+build/
+.turbo/
+
+# Environment & Secrets (CRITICAL)
+.env
+.env.*
+!.env.example
+*.env
+env.local
+.env.local
+.env.*.local
+
+# IBM Cloud / Secrets Patterns
+*IBM_CLOUD_API_KEY*
+*ibm_cloud_api_key*
+*API_KEY*
+*api_key*
+*SECRET*
+*password*
+
+# AI Assistant Cache (bob_sessions/ folder is KEPT for evidence)
+.cursor/
+.copilot/
+.continue/
+.gemini/
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json

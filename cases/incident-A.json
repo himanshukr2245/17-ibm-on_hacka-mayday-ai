@@ -1,0 +1,190 @@
+{
+  "id": "INC-2041",
+  "title": "TypeError: Cannot read properties of undefined (reading 'amount')",
+  "severity": "SEV-1",
+  "service": "payment-service / shopfront-api",
+  "timestamp": "03:14:22 UTC",
+  "source": "PagerDuty / Sentry Alert",
+  "rawAlert": "ERROR [2026-09-25T03:14:21.802Z] payment-service: Unhandled rejection during checkout\nTypeError: Cannot read properties of undefined (reading 'amount')\n    at processPayment (src/payment/adapter.ts:31:34)\n    at handleCheckout (src/orders/checkout.ts:18:25)\n    at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)\nImpact: 100% checkout failure rate for EU/US customers.",
+  "events": [
+    {
+      "t": 500,
+      "type": "incident.received",
+      "payload": {
+        "title": "TypeError: Cannot read properties of undefined (reading 'amount')",
+        "severity": "SEV-1",
+        "service": "payment-service",
+        "source": "PagerDuty"
+      }
+    },
+    {
+      "t": 1800,
+      "type": "triage.completed",
+      "payload": {
+        "summary": "Stack trace traces failure to src/payment/adapter.ts line 31. Suspected API contract drift following recent deployment.",
+        "hypotheses": [
+          {
+            "agent": "RECON-1",
+            "specialist": "Recent Change Detective",
+            "statement": "Recent dependency bump (paylink-sdk 2.4 → 3.0) altered response contract shape."
+          },
+          {
+            "agent": "RECON-2",
+            "specialist": "Null-Safety / Logic Detective",
+            "statement": "Missing optional chaining on response.fee; upstream occasionally returns null fee."
+          },
+          {
+            "agent": "RECON-3",
+            "specialist": "Concurrency / State Detective",
+            "statement": "Race condition on shared request context causing interleaved payment response."
+          }
+        ]
+      }
+    },
+    {
+      "t": 3200,
+      "type": "agent.spawned",
+      "payload": {
+        "agent": "RECON-1",
+        "specialist": "Recent Change Detective",
+        "hypothesis": "Checking git blame & commit history for paylink-sdk changes..."
+      }
+    },
+    {
+      "t": 3500,
+      "type": "agent.spawned",
+      "payload": {
+        "agent": "RECON-2",
+        "specialist": "Null-Safety Detective",
+        "hypothesis": "Auditing adapter.ts:31 for missing null assertions & fallbacks..."
+      }
+    },
+    {
+      "t": 3800,
+      "type": "agent.spawned",
+      "payload": {
+        "agent": "RECON-3",
+        "specialist": "Concurrency Detective",
+        "hypothesis": "Inspecting checkout.ts for async interleaving and shared memory..."
+      }
+    },
+    {
+      "t": 5200,
+      "type": "agent.evidence",
+      "payload": {
+        "agent": "RECON-1",
+        "kind": "commit",
+        "sha": "e9a18f4",
+        "note": "Commit e9a18f4 bumped paylink-sdk to v3.0. SDK CHANGELOG notes: 'fee object replaced with data.feeCents'."
+      }
+    },
+    {
+      "t": 5800,
+      "type": "agent.evidence",
+      "payload": {
+        "agent": "RECON-2",
+        "kind": "code",
+        "file": "src/payment/adapter.ts",
+        "line": 31,
+        "note": "Line 31 accesses gatewayRaw.fee.amount with no defensive null check."
+      }
+    },
+    {
+      "t": 6800,
+      "type": "agent.falsified",
+      "payload": {
+        "agent": "RECON-3",
+        "reason": "Execution graph is completely serial. No async interleaving detected. Theory disproven."
+      }
+    },
+    {
+      "t": 8200,
+      "type": "agent.rung",
+      "payload": {
+        "agent": "RECON-1",
+        "rung": 2,
+        "label": "R2: Reproduction Test Created (checkout.test.ts)",
+        "reproCode": "expect(result.fee).toBeCloseTo(0.29, 2)"
+      }
+    },
+    {
+      "t": 9100,
+      "type": "agent.rung",
+      "payload": {
+        "agent": "RECON-2",
+        "rung": 1,
+        "label": "R1: Proposing defensive patch: res.fee?.amount ?? 0"
+      }
+    },
+    {
+      "t": 10800,
+      "type": "matrix.result",
+      "payload": {
+        "columns": ["Repro Test (Fee Invariant)", "Crash Prevention", "Regression Suite"],
+        "rows": [
+          {
+            "agent": "RECON-1 (Contract Adaptation)",
+            "results": ["PASSED", "PASSED", "PASSED"],
+            "verdict": "VALID_FIX"
+          },
+          {
+            "agent": "RECON-2 (Lazy Null-Check)",
+            "results": ["FAILED ($0 charged)", "PASSED", "FAILED"],
+            "verdict": "BAND_AID_REJECTED"
+          }
+        ]
+      }
+    },
+    {
+      "t": 12200,
+      "type": "verdict.declared",
+      "payload": {
+        "winner": "RECON-1",
+        "rationale": "RECON-1 identified true root-cause: PayLink v3.0 SDK contract change. RECON-2 band-aid patch silently omits processing fee and fails business invariant. RECON-1 declared champion.",
+        "escalate": false
+      }
+    },
+    {
+      "t": 14000,
+      "type": "fix.attempt",
+      "payload": {
+        "attempt": 1,
+        "file": "src/payment/adapter.ts",
+        "diff": "- const fee = (gatewayRaw as any).fee.amount;\n+ const fee = (gatewayRaw as any).data.feeCents / 100;"
+      }
+    },
+    {
+      "t": 16000,
+      "type": "test.result",
+      "payload": {
+        "attempt": 1,
+        "suite": "vitest",
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "log": "✓ test/checkout.test.ts (1 test)\n✓ test/payment.test.ts (3 tests)\n✓ test/orders.test.ts (4 tests)\nTest Files  3 passed (3)\nTests  8 passed (8)\nTime  412ms"
+      }
+    },
+    {
+      "t": 17800,
+      "type": "pr.ready",
+      "payload": {
+        "branch": "mayday/fix-inc-2041-paylink-sdk3",
+        "prNumber": 104,
+        "prTitle": "fix(payment): map PayLink SDK v3.0 feeCents contract",
+        "prUrl": "https://github.com/team-sita/shopfront/pull/104",
+        "filesChanged": 1,
+        "testsAdded": 1
+      }
+    },
+    {
+      "t": 19500,
+      "type": "postmortem.ready",
+      "payload": {
+        "mttr": "42 Seconds",
+        "ttrc": "14 Seconds",
+        "prevention": "Added schema validator for third-party SDK payloads and automated contract invariant test in CI pipeline."
+      }
+    }
+  ]
+}
