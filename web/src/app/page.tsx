@@ -24,6 +24,7 @@ import {
   Sparkles,
   ExternalLink
 } from 'lucide-react';
+import { sounds } from '../lib/audio';
 
 interface Hypothesis {
   agent: string;
@@ -306,6 +307,10 @@ export default function MaydayWarRoom() {
 
   // Update detective state based on step
   useEffect(() => {
+    if (step === 1) sounds.playRadarPing();
+    if (step === 2) sounds.playTestFailure();
+    if (step === 3) sounds.playGreenChime();
+
     if (step >= 1 && currentIncident.timeline[0]) {
       setDetectives((prev) => {
         const next = [...prev];

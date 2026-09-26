@@ -8,7 +8,8 @@
     "dev:clean": "npm --prefix web run dev",
     "build": "npm --prefix web run build",
     "start": "npm --prefix web run start",
-    "test": "npm --prefix targets/shopfront test"
+    "test": "npm --prefix targets/shopfront test",
+    "check:all": "npm test && npm run build"
   },
   "keywords": [
     "ibm-bob-2.0",
