@@ -34,7 +34,7 @@ export async function processPayment(req: ChargeRequest): Promise<ChargeResponse
 
   // FIX (INC-2041): PayLink SDK v3.0 renamed fee.amount → data.feeCents.
   // Convert integer cents to dollars to preserve the 2.9% fee invariant.
-  const fee = (gatewayRaw as any).fee.amount;
+  const fee = gatewayRaw.data.feeCents / 100;
 
   const total = req.amountDollars + fee;
 

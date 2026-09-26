@@ -25,7 +25,12 @@ import {
   ExternalLink,
   Copy,
   Printer,
-  Check
+  Check,
+  GitBranch,
+  History,
+  Radio,
+  User,
+  Info
 } from 'lucide-react';
 import { sounds } from '../lib/audio';
 
@@ -45,6 +50,17 @@ interface Hypothesis {
   falsifiedReason?: string;
 }
 
+interface GitCommitItem {
+  sha: string;
+  author: string;
+  avatar: string;
+  timeAgo: string;
+  message: string;
+  type: 'STABLE' | 'CULPRIT' | 'CROWN_FIX';
+  fileChanged: string;
+  diffSnippet: string;
+}
+
 const INCIDENT_DATA = {
   A: {
     id: 'INC-2041',
@@ -55,6 +71,59 @@ const INCIDENT_DATA = {
     targetParam: 'incident-a' as const,
     alertSnippet: 'Unhandled rejection during customer checkout. 100% failure rate for live transactions.',
     winner: 'RECON-1',
+    isEscalation: false,
+    commits: [
+      {
+        sha: '7a12b3c',
+        author: '@sarah-dev',
+        avatar: '👩‍💻',
+        timeAgo: '3 hours ago',
+        message: 'feat(checkout): add coupon discounts and currency selector',
+        type: 'STABLE' as const,
+        fileChanged: 'src/checkout/coupons.ts',
+        diffSnippet: '+ export function applyCoupon(code: string, total: number): number {\n+   return total * 0.9;\n+ }'
+      },
+      {
+        sha: 'f48a192',
+        author: '@alex-ui',
+        avatar: '🎨',
+        timeAgo: '2 hours ago',
+        message: 'style(cart): polish mobile padding and typography tokens',
+        type: 'STABLE' as const,
+        fileChanged: 'src/components/CartModal.tsx',
+        diffSnippet: '- <div className="p-2">\n+ <div className="p-4 sm:p-6 font-mono">'
+      },
+      {
+        sha: 'e9a18f4',
+        author: '@bot-renovate',
+        avatar: '🤖',
+        timeAgo: '48 mins ago',
+        message: 'chore(deps): bump paylink-sdk from 2.4 to 3.0',
+        type: 'CULPRIT' as const,
+        fileChanged: 'package.json, src/payment/adapter.ts',
+        diffSnippet: '// Breaking envelope change silently shipped in v3.0!\n- "paylink-sdk": "2.4.1"\n+ "paylink-sdk": "3.0.0"\n// Response structure changed: { fee: { amount } } -> { data: { feeCents } }'
+      },
+      {
+        sha: 'b819d04',
+        author: '@mike-ops',
+        avatar: '🛠️',
+        timeAgo: '35 mins ago',
+        message: 'docs(readme): update staging deployment runbook and flags',
+        type: 'STABLE' as const,
+        fileChanged: 'README.md',
+        diffSnippet: '+ ### Deployment Notes\n+ Ensure all external webhooks respond with 200 OK.'
+      },
+      {
+        sha: 'c931e05',
+        author: '@ibm-bob-2.0',
+        avatar: '👑',
+        timeAgo: 'Just now',
+        message: 'fix(payment): map PayLink SDK v3.0 feeCents / 100 [PR #104]',
+        type: 'CROWN_FIX' as const,
+        fileChanged: 'src/payment/adapter.ts',
+        diffSnippet: '- const fee = (gatewayRaw as any).fee.amount;\n+ const fee = gatewayRaw.data.feeCents / 100; // Preserves 2.9% fee invariant ($10.29 charged)'
+      }
+    ],
     detectives: [
       {
         agent: 'RECON-1',
@@ -162,6 +231,49 @@ const INCIDENT_DATA = {
     targetParam: 'incident-b' as const,
     alertSnippet: 'Ghost 500s during flash sale burst. Warehouse stock dipped to -10 with 10 units oversold.',
     winner: 'RECON-3',
+    isEscalation: false,
+    commits: [
+      {
+        sha: '3e84a11',
+        author: '@dave-eng',
+        avatar: '👨‍🔧',
+        timeAgo: '5 hours ago',
+        message: 'feat(inventory): add low stock notification webhooks',
+        type: 'STABLE' as const,
+        fileChanged: 'src/inventory/notifications.ts',
+        diffSnippet: '+ export async function notifyLowStock(sku: string) {\n+   await dispatchWebhook("low-stock", { sku });\n+ }'
+      },
+      {
+        sha: '4b91f02',
+        author: '@speed-demon',
+        avatar: '🏎️',
+        timeAgo: '1 hour ago',
+        message: 'perf(orders): validate and reserve order lines in parallel with Promise.all()',
+        type: 'CULPRIT' as const,
+        fileChanged: 'src/inventory/service.ts',
+        diffSnippet: '// Introduced asynchronous check-then-act race gap!\n- for (const item of cart) { await reserve(item); }\n+ await Promise.all(cart.map(reserve)); // Interleaving async delay causes overselling'
+      },
+      {
+        sha: 'd77a810',
+        author: '@devops-bot',
+        avatar: '🤖',
+        timeAgo: '40 mins ago',
+        message: 'chore(ci): update Vitest timeout threshold to 10000ms',
+        type: 'STABLE' as const,
+        fileChanged: 'vitest.config.ts',
+        diffSnippet: '- testTimeout: 5000\n+ testTimeout: 10000'
+      },
+      {
+        sha: '6a18f03',
+        author: '@ibm-bob-2.0',
+        avatar: '👑',
+        timeAgo: 'Just now',
+        message: 'fix(inventory): apply per-SKU promise queue mutex to serialize reservations [PR #105]',
+        type: 'CROWN_FIX' as const,
+        fileChanged: 'src/inventory/service.ts',
+        diffSnippet: '+ const skuQueue = new Map<string, Promise<unknown>>();\n+ const tail = skuQueue.get(sku) ?? Promise.resolve();\n+ const next = tail.then(async () => { /* critical section */ });'
+      }
+    ],
     detectives: [
       {
         agent: 'RECON-1',
@@ -259,6 +371,261 @@ const INCIDENT_DATA = {
       rootCause: "Commit 4b91f02 introduced parallel order fulfillment batching. Between reading available stock and decrementing it, an asynchronous I/O gap allowed concurrent requests to oversell inventory into negative values.",
       rejectionReason: "Agent RECON-2 proposed exponential backoff retries. The Cross-Examination Matrix revealed retrying failed calls exacerbated thread contention and caused 20 out of 10 items to be sold. RECON-3's atomic per-SKU mutex was crowned."
     }
+  },
+  C: {
+    id: 'INC-2043',
+    severity: 'SEV-2',
+    title: 'OOMKilled & Event Loop Freeze: Unbounded EventEmitter Listener Leak',
+    target: 'order-service (src/order/service.ts:44)',
+    targetFile: 'targets/shopfront/src/order/service.ts',
+    targetParam: 'incident-a' as const,
+    alertSnippet: 'MaxListenersExceededWarning: 501 listeners added to EventEmitter. Node heap exhausted at 1.4GB.',
+    winner: 'RECON-2',
+    isEscalation: false,
+    commits: [
+      {
+        sha: '9c11a02',
+        author: '@core-team',
+        avatar: '💼',
+        timeAgo: '6 hours ago',
+        message: 'refactor(bus): initialize shared EventEmitter broker',
+        type: 'STABLE' as const,
+        fileChanged: 'src/events/bus.ts',
+        diffSnippet: '+ export const eventBus = new EventEmitter();'
+      },
+      {
+        sha: '8f3c21a',
+        author: '@junior-dev',
+        avatar: '🐣',
+        timeAgo: '2 hours ago',
+        message: 'feat(notifications): attach inventory alert listener per order request',
+        type: 'CULPRIT' as const,
+        fileChanged: 'src/order/service.ts',
+        diffSnippet: '// Registered on every incoming request without cleanup!\n+ export async function createOrder(req: OrderReq) {\n+   eventBus.on("inventory:low", handleLowStockAlert); // LEAK: 500 orders = 500 listeners\n+ }'
+      },
+      {
+        sha: '9e44f12',
+        author: '@ibm-bob-2.0',
+        avatar: '👑',
+        timeAgo: 'Just now',
+        message: 'fix(order): convert per-request listener to singleton startup listener [PR #106]',
+        type: 'CROWN_FIX' as const,
+        fileChanged: 'src/order/service.ts',
+        diffSnippet: '- eventBus.on("inventory:low", handleLowStockAlert);\n+ // Registered once at application boot\n+ eventBus.once("inventory:low", handleLowStockAlert);'
+      }
+    ],
+    detectives: [
+      {
+        agent: 'RECON-1',
+        name: 'Recent Changes Detective',
+        avatar: '🕵️',
+        theory: 'Commit 8f3c21a introduced per-request event subscriptions without lifecycle cleanup',
+        status: 'INVESTIGATING' as const,
+        rungs: { r0: true, r1: false, r2: false, r3: false },
+        evidence: 'Auditing eventBus.on calls in order/service.ts...'
+      },
+      {
+        agent: 'RECON-2',
+        name: 'Null-Safety & Logic Detective',
+        avatar: '🛡️',
+        theory: 'Event listener collection lacks garbage collection bounds, exhausting heap memory',
+        status: 'INVESTIGATING' as const,
+        rungs: { r0: true, r1: false, r2: false, r3: false },
+        evidence: 'Profiling listener count under 500 synthetic orders...'
+      },
+      {
+        agent: 'RECON-3',
+        name: 'Concurrency & Race Detective',
+        avatar: '⚡',
+        theory: 'Simultaneous requests triggering circular event dispatch loops',
+        status: 'INVESTIGATING' as const,
+        rungs: { r0: true, r1: false, r2: false, r3: false },
+        evidence: 'Checking for recursive event emissions...'
+      }
+    ],
+    timeline: [
+      {
+        step: 1,
+        updates: [
+          { index: 0, rungs: { r0: true, r1: true, r2: false, r3: false }, evidence: 'Located eventBus.on() inside createOrder()' },
+          { index: 1, rungs: { r0: true, r1: true, r2: false, r3: false }, evidence: 'Listener count grows monotonically with traffic' },
+          { index: 2, status: 'FALSIFIED' as const, falsifiedReason: 'Event flow is strictly linear, not recursive.' }
+        ]
+      },
+      {
+        step: 2,
+        updates: [
+          { index: 1, rungs: { r0: true, r1: true, r2: true, r3: false }, evidence: 'Reproduction test written: 500 orders create 500 listeners' },
+          { index: 0, evidence: 'Culprit commit identified' }
+        ]
+      },
+      {
+        step: 3,
+        updates: [
+          { index: 1, rungs: { r0: true, r1: true, r2: true, r3: true }, status: 'VERIFIED' as const, evidence: 'Singleton listener registration verified. Memory footprint stable at 42MB.' },
+          { index: 0, status: 'VERIFIED' as const, evidence: 'Confirmed fix clears listener leak' }
+        ]
+      }
+    ],
+    matrix: {
+      reproCol: 'Repro Test (500 Synthetic Orders)',
+      rows: [
+        {
+          name: 'RECON-2: Singleton Boot Registration',
+          repro: '✅ PASSED (Listener count = 1)',
+          crash: '✅ PASSED (Memory flat at 42MB)',
+          suite: '✅ 4/4 PASSED',
+          verdict: 'VALID CROWN FIX',
+          isWinner: true
+        },
+        {
+          name: 'RECON-3: setMaxListeners(Infinity)',
+          repro: '❌ FAILED (Still leaks memory)',
+          crash: '❌ FAILED (OOMCrash still occurs)',
+          suite: '❌ REJECTED',
+          verdict: 'REJECTED: SILENT HEAP BLEED',
+          isWinner: false
+        }
+      ]
+    },
+    diff: {
+      file: 'src/order/service.ts',
+      context: 'export async function createOrder(req: OrderReq) {',
+      removed: '- eventBus.on("inventory:low", handleLowStockAlert); // LEAKS ON EVERY REQUEST',
+      added: '+ // MOVED: Registered once at server bootstrap in index.ts\n+ // eventBus.once("inventory:low", handleLowStockAlert);',
+      after: 'return { orderId: generateId() };'
+    },
+    tests: [
+      { name: '✓ test/order.test.ts (1 test passed)', detail: '→ listener count remains bounded to 1 under 500 orders (14ms)' }
+    ],
+    postmortem: {
+      title: 'INC-2043 Postmortem: Unbounded EventEmitter Memory Leak in Order Worker',
+      prNumber: 106,
+      prUrl: 'https://github.com/himanshukr2245/17-ibm-on_hacka-mayday-ai/pull/3',
+      ttrc: '9 Seconds',
+      ttvf: '28 Seconds',
+      humanBaseline: '35 Minutes',
+      improvement: '98.7% Faster ⚡',
+      rootCause: "Commit 8f3c21a registered an event listener inside a per-request controller function instead of application bootstrap. Each transaction appended a new listener to the heap.",
+      rejectionReason: "RECON-3 suggested increasing setMaxListeners. The matrix proved this merely silenced the warning while the Node process crashed with OOMKilled under production traffic."
+    }
+  },
+  D: {
+    id: 'INC-2044',
+    severity: 'SEV-1',
+    title: 'Upstream Network Partition: HTTP 504 Gateway Timeout from Acquiring Bank',
+    target: 'external-provider (gateway.visa.com:443)',
+    targetFile: 'external: api.visa.com',
+    targetParam: 'incident-a' as const,
+    alertSnippet: 'HTTP 504 Gateway Timeout & ECONNRESET. 0 code changes in repository for 72 hours.',
+    winner: 'NONE',
+    isEscalation: true,
+    commits: [
+      {
+        sha: 'b120c44',
+        author: '@release-lead',
+        avatar: '👔',
+        timeAgo: '72 hours ago',
+        message: 'chore(release): v2.14.0 stable production tag',
+        type: 'STABLE' as const,
+        fileChanged: 'RELEASE_NOTES.md',
+        diffSnippet: 'All test suites green. 0 pending PRs.'
+      },
+      {
+        sha: 'a401f89',
+        author: '@security',
+        avatar: '🔒',
+        timeAgo: '48 hours ago',
+        message: 'docs(security): rotate quarterly compliance keys',
+        type: 'STABLE' as const,
+        fileChanged: 'SECURITY.md',
+        diffSnippet: 'No application code modified.'
+      }
+    ],
+    detectives: [
+      {
+        agent: 'RECON-1',
+        name: 'Recent Changes Detective',
+        avatar: '🕵️',
+        theory: 'Recent commit broke outbound TLS handshake or gateway URL',
+        status: 'FALSIFIED' as const,
+        rungs: { r0: true, r1: false, r2: false, r3: false },
+        evidence: 'Git audit: Zero code changes in repository for 72 hours.',
+        falsifiedReason: 'Zero repository commits in 72 hours. Not an internal code change.'
+      },
+      {
+        agent: 'RECON-2',
+        name: 'Null-Safety & Logic Detective',
+        avatar: '🛡️',
+        theory: 'Internal request payload failed serialization or schema contract',
+        status: 'FALSIFIED' as const,
+        rungs: { r0: true, r1: false, r2: false, r3: false },
+        evidence: 'Payload serialization verified against RFC-7159 JSON specification.',
+        falsifiedReason: 'Internal serialization 100% valid. Upstream server returning 504.'
+      },
+      {
+        agent: 'RECON-3',
+        name: 'Concurrency & Race Detective',
+        avatar: '⚡',
+        theory: 'Connection pool saturation or local TCP socket exhaustion',
+        status: 'FALSIFIED' as const,
+        rungs: { r0: true, r1: false, r2: false, r3: false },
+        evidence: 'Local socket pool: 12/1000 in use. Host networking healthy.',
+        falsifiedReason: 'Host sockets healthy. External bank BGP route unreachable.'
+      }
+    ],
+    timeline: [
+      {
+        step: 1,
+        updates: [
+          { index: 0, status: 'FALSIFIED' as const, falsifiedReason: '0 commits in 72h. Internal code is untouched.' },
+          { index: 1, status: 'FALSIFIED' as const, falsifiedReason: 'Payload schema valid. Outbound TCP timeout.' },
+          { index: 2, status: 'FALSIFIED' as const, falsifiedReason: 'Local networking normal. External banking API down.' }
+        ]
+      },
+      {
+        step: 2,
+        updates: []
+      },
+      {
+        step: 3,
+        updates: []
+      }
+    ],
+    matrix: {
+      reproCol: 'External Gateway Ping (BGP Route)',
+      rows: [
+        {
+          name: 'ALL SUBAGENTS: Internal Code Modification',
+          repro: '❌ FAILED (External Bank Outage)',
+          crash: '❌ CANNOT FIX (Upstream 504)',
+          suite: 'N/A',
+          verdict: 'ESCALATE TO HUMAN ON-CALL',
+          isWinner: false
+        }
+      ]
+    },
+    diff: {
+      file: 'External Cloud Provider (gateway.visa.com)',
+      context: '// MAYDAY HONESTY GUARANTEE:',
+      removed: '// No hallucinated code edits applied for external partner outages.',
+      added: '+ // ESCALATED TO HUMAN SRE: Downstream Banking Outage (Incident INC-2044)',
+      after: '// PagerDuty status page alert dispatched to provider NOC.'
+    },
+    tests: [
+      { name: '⚠ External Network Diagnostics', detail: '→ traceroute to api.visa.com timed out at hop 14 (Level3 BGP partition)' }
+    ],
+    postmortem: {
+      title: 'INC-2044 Postmortem: External Acquiring Bank Cloud Outage (Honesty Escalation)',
+      prNumber: 0,
+      prUrl: 'https://status.visa.com',
+      ttrc: '6 Seconds',
+      ttvf: 'Instant Escalation',
+      humanBaseline: '45 Minutes (Investigating wrong servers)',
+      improvement: 'Saved 45 min of wasted internal debugging ⚡',
+      rootCause: "The acquiring banking provider suffered an unannounced BGP route partition resulting in HTTP 504 timeouts. No internal code was broken.",
+      rejectionReason: "MAYDAY disproved all internal code theories within 6 seconds. Instead of fabricating hallucinated code patches, MAYDAY declared an HONEST ESCALATION to human on-call with non-urgent circuit breaker recommendations."
+    }
   }
 };
 
@@ -268,10 +635,15 @@ export default function MaydayWarRoom() {
   const [step, setStep] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [activeTab, setActiveTab] = useState<'matrix' | 'diff' | 'tests' | 'postmortem'>('matrix');
-  const [selectedIncident, setSelectedIncident] = useState<'A' | 'B'>('A');
+  const [selectedIncident, setSelectedIncident] = useState<'A' | 'B' | 'C' | 'D'>('A');
 
   const currentIncident = INCIDENT_DATA[selectedIncident];
   const [detectives, setDetectives] = useState<Hypothesis[]>(currentIncident.detectives);
+
+  // Black Box Git Timeline selected commit
+  const [selectedCommit, setSelectedCommit] = useState<GitCommitItem>(
+    currentIncident.commits.find((c) => c.type === 'CULPRIT') || currentIncident.commits[0]
+  );
 
   // Live Disk Status from physical host files
   const [diskStatus, setDiskStatus] = useState<{
@@ -304,12 +676,15 @@ export default function MaydayWarRoom() {
   }, []);
 
   // Switch incident
-  const switchIncident = (inc: 'A' | 'B') => {
+  const switchIncident = (inc: 'A' | 'B' | 'C' | 'D') => {
     setSelectedIncident(inc);
     setIsPlaying(false);
     setStep(0);
     setElapsedMs(0);
     setDetectives(INCIDENT_DATA[inc].detectives);
+    setSelectedCommit(
+      INCIDENT_DATA[inc].commits.find((c) => c.type === 'CULPRIT') || INCIDENT_DATA[inc].commits[0]
+    );
     setLiveTestOutput(null);
     setLiveTestPassed(null);
     checkLiveDiskStatus();
@@ -320,6 +695,9 @@ export default function MaydayWarRoom() {
     setStep(0);
     setElapsedMs(0);
     setDetectives(currentIncident.detectives);
+    setSelectedCommit(
+      currentIncident.commits.find((c) => c.type === 'CULPRIT') || currentIncident.commits[0]
+    );
     setLiveTestOutput(null);
     setLiveTestPassed(null);
     checkLiveDiskStatus();
@@ -385,7 +763,7 @@ export default function MaydayWarRoom() {
     }
   };
 
-  // Real end-to-end Triage Squad Launch: Injects bug (if needed), races detectives, fixes code on disk, and passes tests
+  // Real end-to-end Triage Squad Launch
   const handleLaunchTriageSquad = async () => {
     if (isPlaying) {
       setIsPlaying(false);
@@ -394,6 +772,21 @@ export default function MaydayWarRoom() {
 
     setIsPlaying(true);
     sounds.playKlaxon();
+
+    // If Incident D (Honesty escalation), handle fast disproof
+    if (currentIncident.isEscalation) {
+      setTimeout(() => {
+        setStep(1);
+        sounds.playTestFailure();
+      }, 1000 / speed);
+
+      setTimeout(() => {
+        setStep(3);
+        sounds.playRadarPing();
+        setIsPlaying(false);
+      }, 2500 / speed);
+      return;
+    }
 
     const target = currentIncident.targetParam;
     const isCurrentlyFixed = selectedIncident === 'A' 
@@ -548,7 +941,7 @@ ${currentIncident.postmortem.rejectionReason}
             </div>
           </div>
 
-          {/* Incident Selector */}
+          {/* 4-Incident Selector Grid */}
           <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-lg border border-slate-800">
             <button 
               onClick={() => switchIncident('A')}
@@ -558,7 +951,7 @@ ${currentIncident.postmortem.rejectionReason}
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              🅰️ Incident A (Contract Drift)
+              🅰️ INC-2041 (Contract Drift)
             </button>
             <button 
               onClick={() => switchIncident('B')}
@@ -568,7 +961,27 @@ ${currentIncident.postmortem.rejectionReason}
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              🅱️ Incident B (Concurrency Race)
+              🅱️ INC-2042 (Concurrency Race)
+            </button>
+            <button 
+              onClick={() => switchIncident('C')}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition ${
+                selectedIncident === 'C' 
+                  ? 'bg-purple-500 text-white font-semibold shadow-lg shadow-purple-500/20' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🅲 INC-2043 (Memory Leak)
+            </button>
+            <button 
+              onClick={() => switchIncident('D')}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition ${
+                selectedIncident === 'D' 
+                  ? 'bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/20' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🅳 INC-2044 (Honesty Escalation)
             </button>
           </div>
         </div>
@@ -650,7 +1063,7 @@ ${currentIncident.postmortem.rejectionReason}
                 {step === 0 && 'AWAITING DISPATCH'}
                 {step === 1 && 'TRIAGE: 3 DETECTIVES RACING'}
                 {step === 2 && 'REPRODUCING BUG WITH TESTS'}
-                {step >= 3 && '✅ RESOLVED & VERIFIED'}
+                {step >= 3 && (currentIncident.isEscalation ? '⚠️ ESCALATED TO HUMAN' : '✅ RESOLVED & VERIFIED')}
               </div>
             </div>
           </div>
@@ -676,7 +1089,12 @@ ${currentIncident.postmortem.rejectionReason}
                 </code>
 
                 {/* Disk State Badge */}
-                {isTargetFixedOnDisk ? (
+                {currentIncident.isEscalation ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[11px] font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                    STATUS: EXTERNAL CLOUD PARTNER (INTERNAL CODE UNTOUCHED)
+                  </span>
+                ) : isTargetFixedOnDisk ? (
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                     STATUS: HEALTHY_PATCHED (PASSES INVARIANTS)
@@ -691,47 +1109,49 @@ ${currentIncident.postmortem.rejectionReason}
             </div>
 
             {/* Direct Hardware Action Buttons */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Break Button */}
-              <button
-                onClick={() => triggerHeal('break')}
-                disabled={isHealing || liveTestRunning}
-                className="px-3.5 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/40 font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-red-950/40"
-                title="Modifies code file on disk to plant the exact bug and execute Vitest"
-              >
-                <span>💣 Break Code on Disk</span>
-              </button>
+            {!currentIncident.isEscalation && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Break Button */}
+                <button
+                  onClick={() => triggerHeal('break')}
+                  disabled={isHealing || liveTestRunning}
+                  className="px-3.5 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/40 font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-red-950/40"
+                  title="Modifies code file on disk to plant the exact bug and execute Vitest"
+                >
+                  <span>💣 Break Code on Disk</span>
+                </button>
 
-              {/* Fix Button */}
-              <button
-                onClick={() => triggerHeal('fix')}
-                disabled={isHealing || liveTestRunning}
-                className="px-3.5 py-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-emerald-950/40"
-                title="Applies the IBM Bob 2.0 patch to file on disk and verifies all tests pass"
-              >
-                <span>🩹 Auto-Heal (Bob 2.0 Fix)</span>
-              </button>
+                {/* Fix Button */}
+                <button
+                  onClick={() => triggerHeal('fix')}
+                  disabled={isHealing || liveTestRunning}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-emerald-950/40"
+                  title="Applies the IBM Bob 2.0 patch to file on disk and verifies all tests pass"
+                >
+                  <span>🩹 Auto-Heal (Bob 2.0 Fix)</span>
+                </button>
 
-              {/* Live Vitest Button */}
-              <button
-                onClick={runLiveTests}
-                disabled={liveTestRunning || isHealing}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-blue-600/30"
-                title="Directly executes 'npx vitest run' against targets/shopfront"
-              >
-                {liveTestRunning ? (
-                  <>
-                    <RotateCcw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Running Machine Tests...</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Run Machine Vitest</span>
-                  </>
-                )}
-              </button>
-            </div>
+                {/* Live Vitest Button */}
+                <button
+                  onClick={runLiveTests}
+                  disabled={liveTestRunning || isHealing}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-blue-600/30"
+                  title="Directly executes 'npx vitest run' against targets/shopfront"
+                >
+                  {liveTestRunning ? (
+                    <>
+                      <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Running Machine Tests...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Run Machine Vitest</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -849,6 +1269,136 @@ ${currentIncident.postmortem.rejectionReason}
           </div>
         </div>
 
+        {/* 🌟 FEATURE 1: INTERACTIVE BLACK BOX GIT COMMIT TIMELINE & CULPRIT LOCATOR */}
+        <div className="bg-[#0b0f19] border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+            <div className="flex items-center gap-2">
+              <GitBranch className="w-4 h-4 text-amber-400" />
+              <h3 className="font-bold text-sm uppercase tracking-wider text-slate-200 font-mono flex items-center gap-2">
+                <span>Black Box Git Commit Timeline & Culprit Locator</span>
+              </h3>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                branch: <strong className="text-white">main</strong>
+              </span>
+              <span>• Click any commit dot to inspect diff</span>
+            </div>
+          </div>
+
+          {/* Interactive Horizontal Commit Track */}
+          <div className="relative py-4 px-2">
+            {/* Connecting Track Line */}
+            <div className="absolute top-1/2 left-8 right-8 h-0.5 bg-slate-800 -translate-y-1/2 z-0"></div>
+
+            {/* Commit Dots Grid */}
+            <div className="relative z-10 flex items-center justify-between gap-2 overflow-x-auto">
+              {currentIncident.commits.map((c, idx) => {
+                const isSelected = selectedCommit.sha === c.sha;
+                const isCulprit = c.type === 'CULPRIT';
+                const isFix = c.type === 'CROWN_FIX';
+
+                return (
+                  <button
+                    key={c.sha}
+                    onClick={() => {
+                      setSelectedCommit(c);
+                      sounds.playTerminalClick();
+                    }}
+                    className={`flex flex-col items-center gap-2 group transition focus:outline-none min-w-[110px] ${
+                      isSelected ? 'scale-105' : 'opacity-80 hover:opacity-100'
+                    }`}
+                  >
+                    {/* Commit Dot with Beacon */}
+                    <div className="relative">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition shadow-lg ${
+                        isCulprit
+                          ? 'bg-red-500/20 border-red-500 text-red-400 shadow-red-500/30'
+                          : isFix
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-emerald-500/30'
+                          : isSelected
+                          ? 'bg-blue-500/20 border-blue-400 text-blue-300 shadow-blue-500/20'
+                          : 'bg-slate-900 border-slate-700 text-slate-400 group-hover:border-slate-500'
+                      }`}>
+                        {isCulprit ? (
+                          <Flame className="w-4 h-4 animate-bounce" />
+                        ) : isFix ? (
+                          <Sparkles className="w-4 h-4" />
+                        ) : (
+                          <GitCommit className="w-4 h-4" />
+                        )}
+                      </div>
+
+                      {/* Pulsing Beacon on Culprit */}
+                      {isCulprit && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 animate-ping"></span>
+                      )}
+                    </div>
+
+                    {/* Commit SHA & Author */}
+                    <div className="text-center font-mono">
+                      <div className={`text-xs font-bold ${
+                        isCulprit ? 'text-red-400' : isFix ? 'text-emerald-400' : isSelected ? 'text-blue-300' : 'text-slate-300'
+                      }`}>
+                        {c.sha}
+                      </div>
+                      <div className="text-[10px] text-slate-500 truncate max-w-[100px]">{c.author}</div>
+                      <div className="text-[9px] text-slate-600">{c.timeAgo}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Selected Commit Deep-Dive Card */}
+          <div className="bg-[#07090e] rounded-xl p-4 border border-slate-800 text-xs font-mono space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{selectedCommit.avatar}</span>
+                <div>
+                  <span className="font-bold text-white text-sm">{selectedCommit.message}</span>
+                  <div className="text-[11px] text-slate-400">
+                    Committed by <strong className="text-slate-200">{selectedCommit.author}</strong> ({selectedCommit.timeAgo}) • SHA: <code className="text-blue-400">{selectedCommit.sha}</code>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                {selectedCommit.type === 'CULPRIT' && (
+                  <span className="px-2.5 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-500/40 text-[11px] font-bold flex items-center gap-1.5 animate-pulse">
+                    <Flame className="w-3.5 h-3.5 text-red-400" />
+                    🔥 CULPRIT COMMIT (INTRODUCED REGRESSION)
+                  </span>
+                )}
+                {selectedCommit.type === 'CROWN_FIX' && (
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    👑 IBM BOB 2.0 CROWN FIX
+                  </span>
+                )}
+                {selectedCommit.type === 'STABLE' && (
+                  <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[11px] font-semibold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-blue-400" />
+                    ✓ CLEAN ANCESTOR COMMIT
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Diff Preview */}
+            <div className="space-y-1">
+              <div className="text-[11px] text-slate-500 flex items-center justify-between">
+                <span>File modified: <strong className="text-slate-300">{selectedCommit.fileChanged}</strong></span>
+                <span>Unified Diff Snippet</span>
+              </div>
+              <pre className="p-3 bg-black/80 rounded-lg border border-slate-900 text-slate-300 overflow-x-auto text-[11px] leading-relaxed">
+                {selectedCommit.diffSnippet}
+              </pre>
+            </div>
+          </div>
+        </div>
+
         {/* Section 2: Interactive Tabs (Cross-Exam Matrix, Code Diff, Vitest Logs, Postmortem) */}
         <div className="bg-[#0d121d] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
           {/* Tab Bar */}
@@ -958,7 +1508,7 @@ ${currentIncident.postmortem.rejectionReason}
           {activeTab === 'diff' && (
             <div className="p-6 font-mono text-xs space-y-4">
               <div className="flex items-center justify-between text-slate-400 pb-2 border-b border-slate-800">
-                <span>File: <span className="text-white">{currentIncident.diff.file}</span></span>
+                <span>Target: <span className="text-white">{currentIncident.diff.file}</span></span>
                 <span className="text-emerald-400">Self-Healing Attempt: 1/3 (Green on First Try)</span>
               </div>
               <div className="bg-[#07090e] rounded-xl p-4 border border-slate-800/80 space-y-1 overflow-x-auto">
@@ -1077,14 +1627,16 @@ ${currentIncident.postmortem.rejectionReason}
                     <span>Print / Save PDF</span>
                   </button>
 
-                  <a 
-                    href={currentIncident.postmortem.prUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold flex items-center gap-1.5 hover:bg-emerald-500 transition shadow-lg shadow-emerald-600/20"
-                  >
-                    <GitPullRequest className="w-3.5 h-3.5" /> Open Verified PR #{currentIncident.postmortem.prNumber} <ExternalLink className="w-3 h-3 ml-1" />
-                  </a>
+                  {currentIncident.postmortem.prNumber > 0 && (
+                    <a 
+                      href={currentIncident.postmortem.prUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3.5 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold flex items-center gap-1.5 hover:bg-emerald-500 transition shadow-lg shadow-emerald-600/20"
+                    >
+                      <GitPullRequest className="w-3.5 h-3.5" /> Open Verified PR #{currentIncident.postmortem.prNumber} <ExternalLink className="w-3 h-3 ml-1" />
+                    </a>
+                  )}
                 </div>
               </div>
 
@@ -1130,8 +1682,8 @@ ${currentIncident.postmortem.rejectionReason}
           <span>Team SITA (Himanshu Kumar & Priyansu Modi)</span>
         </div>
         <div className="flex items-center gap-4 font-mono text-[11px]">
-          <span className="text-emerald-400 font-semibold">● 3 Subagents Active</span>
-          <span className="text-slate-400">Deterministic Proof Ladder v1.0</span>
+          <span className="text-emerald-400 font-semibold">● 4 Incidents (A, B, C, D) Supported</span>
+          <span className="text-slate-400">Deterministic Proof Ladder v2.0</span>
         </div>
       </footer>
     </div>
