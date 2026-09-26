@@ -136,3 +136,23 @@ html[data-phase='VERIFIED'] {
   animation: thinking-shimmer 1.5s infinite;
   border-radius: 4px;
 }
+
+/* Logic Pipeline Laser Flow */
+@keyframes laser-flow {
+  0% { stroke-dashoffset: 60; }
+  100% { stroke-dashoffset: 0; }
+}
+.laser-flow {
+  stroke-dasharray: 8 6;
+  animation: laser-flow 1.2s linear infinite;
+}
+
+/* Siren Emergency Glow */
+@keyframes siren-glow {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.7)); }
+}
+.siren-glow {
+  animation: siren-glow 1.4s ease-in-out infinite;
+}
+
