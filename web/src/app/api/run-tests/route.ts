@@ -2,7 +2,18 @@ import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import path from 'path';
 
-export async function POST() {
+const DEMO_KEY = process.env.DEMO_KEY || '';
+
+function checkAuth(req: Request): boolean {
+  if (!DEMO_KEY) return true; // local dev: open when key not set
+  return req.headers.get('x-demo-key') === DEMO_KEY;
+}
+
+export async function POST(req: Request) {
+  if (!checkAuth(req)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
   const startTime = Date.now();
   const shopfrontDir = path.resolve(process.cwd(), '../targets/shopfront');
 
@@ -13,8 +24,8 @@ export async function POST() {
       const passed = !error;
       const output = stdout || stderr || (error ? error.message : 'No output');
 
-      // Parse test counts from Vitest output
-      const testsMatch = output.match(/Tests\s+(\d+)\s+passed/);
+      // Parse test counts from Vitest output (supports both Vitest v1 and v2 formats)
+      const testsMatch = output.match(/(\d+)\s+passed/) || output.match(/Tests\s+(\d+)\s+passed/);
       const testCount = testsMatch ? parseInt(testsMatch[1], 10) : (passed ? 2 : 0);
 
       resolve(

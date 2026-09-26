@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/link';
-import { 
+import {
   Coins, 
   Cpu, 
   TrendingUp, 

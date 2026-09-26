@@ -1,20 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Radio, 
-  Flame, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ExternalLink, 
-  Clock, 
+import { getAllLocalIncidents } from '../../db/local';
+import {
+  Radio,
+  Flame,
+  CheckCircle2,
+  Clock,
   ArrowRight,
-  ShieldAlert,
   Cpu,
-  Layers
+  ExternalLink
 } from 'lucide-react';
 import { sounds } from '../../lib/audio';
+
+// Maps each incident to its War Room selector param
+const INCIDENT_WAR_ROOM: Record<string, string> = {
+  'INC-2041': '/?incident=A',
+  'INC-2042': '/?incident=B',
+  'INC-2043': '/?incident=C',
+  'INC-2044': '/?incident=D',
+};
 
 interface IncidentItem {
   id: string;
@@ -81,6 +87,16 @@ const INCIDENTS: IncidentItem[] = [
 ];
 
 export default function IncidentsPage() {
+  const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    getAllLocalIncidents()
+      .then((saved) => {
+        setResolvedIds(new Set(saved.map((i) => i.id)));
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <main className="p-6 max-w-7xl mx-auto w-full space-y-6">
       {/* Top Banner */}
@@ -134,6 +150,12 @@ export default function IncidentsPage() {
                   }`}>
                     {inc.id} [{inc.severity}]
                   </span>
+                  {resolvedIds.has(inc.id) && (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-blue-500/10 text-blue-400 border border-blue-500/30 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                      LIVE RUN
+                    </span>
+                  )}
                   <span className="text-xs text-slate-400 font-mono">{inc.category}</span>
                 </div>
 
@@ -174,7 +196,7 @@ export default function IncidentsPage() {
               </div>
 
               <Link
-                href="/"
+                href={INCIDENT_WAR_ROOM[inc.id] || '/'}
                 onClick={() => sounds.playRadarPing()}
                 className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold transition flex items-center gap-1.5"
               >

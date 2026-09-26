@@ -7,6 +7,13 @@ const ADAPTER_PATH = path.resolve(process.cwd(), '../targets/shopfront/src/payme
 const INVENTORY_PATH = path.resolve(process.cwd(), '../targets/shopfront/src/inventory/service.ts');
 const SHOPFRONT_DIR = path.resolve(process.cwd(), '../targets/shopfront');
 
+const DEMO_KEY = process.env.DEMO_KEY || '';
+
+function checkAuth(req: Request): boolean {
+  if (!DEMO_KEY) return true; // local dev: open when key not set
+  return req.headers.get('x-demo-key') === DEMO_KEY;
+}
+
 // Check disk state for both incidents
 function checkStatus() {
   const adapterContent = fs.existsSync(ADAPTER_PATH) ? fs.readFileSync(ADAPTER_PATH, 'utf8') : '';
@@ -29,7 +36,10 @@ function checkStatus() {
   };
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!checkAuth(req)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const status = checkStatus();
     return NextResponse.json({ success: true, ...status });
@@ -39,8 +49,30 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  if (!checkAuth(req)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
   try {
-    const { action, target = 'incident-a' } = await req.json(); // action: 'break' | 'fix' | 'status', target: 'incident-a' | 'incident-b'
+    const { action, target = 'incident-a' } = await req.json(); // action: 'break' | 'fix' | 'status' | 'reset-all', target: 'incident-a' | 'incident-b' | 'all'
+
+    // Reset ALL targets to healthy patched state
+    if (target === 'all' || action === 'reset-all') {
+      let adapterContent = fs.existsSync(ADAPTER_PATH) ? fs.readFileSync(ADAPTER_PATH, 'utf8') : '';
+      adapterContent = adapterContent.replace(
+        /const fee = \(gatewayRaw as any\)\.fee\.amount;/g,
+        'const fee = gatewayRaw.data.feeCents / 100;'
+      );
+      if (fs.existsSync(ADAPTER_PATH)) fs.writeFileSync(ADAPTER_PATH, adapterContent, 'utf8');
+
+      let inventoryContent = fs.existsSync(INVENTORY_PATH) ? fs.readFileSync(INVENTORY_PATH, 'utf8') : '';
+      if (!inventoryContent.includes('const skuQueue = new Map<string, Promise<unknown>>()')) {
+        inventoryContent = inventoryContent.replace('// skuQueue removed for chaos reproduction', 'const skuQueue = new Map<string, Promise<unknown>>();');
+      }
+      if (fs.existsSync(INVENTORY_PATH)) fs.writeFileSync(INVENTORY_PATH, inventoryContent, 'utf8');
+
+      const finalStatus = checkStatus();
+      return NextResponse.json({ success: true, message: 'All targets restored to healthy state', ...finalStatus });
+    }
 
     if (action === 'status') {
       return NextResponse.json({ success: true, ...checkStatus() });

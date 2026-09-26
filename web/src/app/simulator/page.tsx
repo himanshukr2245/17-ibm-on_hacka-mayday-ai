@@ -18,6 +18,7 @@ import {
   Cpu
 } from 'lucide-react';
 import { sounds } from '../../lib/audio';
+import { callHealAPI, DEMO_MODE } from '../../lib/demoMode';
 
 interface ChaosScenario {
   id: string;
@@ -86,15 +87,10 @@ export default function SimulatorPage() {
     setInjectionLogs(initialLogs);
 
     try {
-      // Real API call mutating disk file and running vitest
-      const res = await fetch('/api/heal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'break', target: selectedScenario.targetParam }),
-      });
-      const data = await res.json();
+      // Real API call mutating disk file and running vitest (with cloud demo fallback)
+      const data = await callHealAPI('break', selectedScenario.targetParam);
       
-      setRealTestOutput(data.output);
+      setRealTestOutput(data.output ?? '');
       sounds.playTestFailure();
 
       setInjectionLogs((prev) => [
@@ -125,14 +121,9 @@ export default function SimulatorPage() {
     ]);
 
     try {
-      const res = await fetch('/api/heal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'fix', target: selectedScenario.targetParam }),
-      });
-      const data = await res.json();
+      const data = await callHealAPI('fix', selectedScenario.targetParam);
 
-      setRealTestOutput(data.output);
+      setRealTestOutput(data.output ?? '');
       if (data.testsPassed) {
         sounds.playGreenChime();
         setInjectionLogs((prev) => [
@@ -144,7 +135,7 @@ export default function SimulatorPage() {
         sounds.playTestFailure();
         setInjectionLogs((prev) => [
           ...prev,
-          `[00:00:10] ❌ Test suite failed after patch: ${data.output.slice(0, 100)}`
+          `[00:00:10] ❌ Test suite failed after patch: ${(data.output ?? '').slice(0, 100)}`
         ]);
       }
     } catch (err: any) {
@@ -171,12 +162,31 @@ export default function SimulatorPage() {
         </div>
 
         <div className="flex items-center gap-2 font-mono text-xs">
-          <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            Host Machine Execution: LIVE
-          </span>
+          {DEMO_MODE ? (
+            <span className="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+              ⚡ Static Demo Mode
+            </span>
+          ) : (
+            <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              Host Machine Execution: LIVE
+            </span>
+          )}
         </div>
       </div>
+
+      {/* Static Demo Mode Banner for Cloudflare Pages */}
+      {DEMO_MODE && (
+        <div className="bg-amber-950/20 border border-amber-500/30 rounded-xl px-4 py-3 text-xs font-mono text-amber-300 flex items-center gap-3">
+          <span className="text-xl">⚡</span>
+          <div>
+            <strong>Static Demo Mode Active:</strong> This deployment runs on Cloudflare Pages (read-only filesystem).
+            Fault injection is simulated with realistic Vitest output — identical to what you see in local development.
+            <span className="text-amber-400 font-bold"> Switch to the War Room to see the full live triage sequence.</span>
+          </div>
+        </div>
+      )}
 
       {/* Scenario Selection Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -247,6 +257,24 @@ export default function SimulatorPage() {
                   <span>Auto-Heal via MAYDAY</span>
                 </>
               )}
+            </button>
+
+            {/* Reset All Targets Button */}
+            <button
+              onClick={async () => {
+                setInjectionLogs(['[RESET] Restoring all targets to healthy state...']);
+                const data = await callHealAPI('reset-all', 'all');
+                setInjectionLogs((prev) => [...prev, '[RESET] ✅ All targets restored to healthy state.']);
+                setIsTriggered(false);
+                setRealTestOutput(null);
+                sounds.playGreenChime();
+              }}
+              disabled={isHealing || isInjecting}
+              className="px-3.5 py-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-xs font-bold transition flex items-center gap-1.5"
+              title="Restores all target files on disk to healthy state"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset All</span>
             </button>
 
             {/* Break / Inject Button */}

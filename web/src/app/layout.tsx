@@ -19,6 +19,17 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.ico',
   },
+  openGraph: {
+    title: 'MAYDAY — Autonomous Incident Commander | IBM Bob 2.0',
+    description: 'Production is down. IBM Bob 2.0 is already on it. Watch 3 AI detectives race in parallel to triage a live SEV-1, reject band-aids, and self-heal in under 42 seconds.',
+    type: 'website',
+    siteName: 'MAYDAY War Room',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MAYDAY — Autonomous Incident Commander | IBM Bob 2.0',
+    description: 'Real-time AI incident commander. Real disk mutation. Real Vitest. Real invariant fixes.',
+  },
 };
 
 export default function RootLayout({

@@ -75,6 +75,14 @@ body {
   animation: stamp-falsified 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+/* Phase color sweep via data-phase attribute on <html> */
+html[data-phase='RACING'] {
+  --warning-amber: #FFB020;
+}
+html[data-phase='VERIFIED'] {
+  --success-green: #10b981;
+}
+
 /* Scanline Overlay for War Room feel */
 .scanlines {
   background: linear-gradient(
@@ -84,8 +92,47 @@ body {
     90deg,
     rgba(255, 0, 0, 0.03),
     rgba(0, 255, 0, 0.01),
-    rgba(0, 0, 255, 0.03)
+    rgba(0, 255, 0, 0.03)
   );
   background-size: 100% 4px, 6px 100%;
   pointer-events: none;
+}
+
+/* Confetti Burst for Crown Fix */
+@keyframes confetti-pop {
+  0%   { transform: scale(0) rotate(0deg); opacity: 1; }
+  60%  { transform: scale(1.4) rotate(45deg); opacity: 1; }
+  100% { transform: scale(0) rotate(90deg); opacity: 0; }
+}
+.confetti-dot {
+  animation: confetti-pop 0.7s ease-out forwards;
+}
+
+/* Incident Severity Glow Pulses */
+@keyframes sev1-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+.sev1-pulse {
+  animation: sev1-glow 1.5s ease-out infinite;
+}
+
+@keyframes sev2-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+}
+.sev2-pulse {
+  animation: sev2-glow 2s ease-out infinite;
+}
+
+/* AI Subagent Thinking Shimmer */
+@keyframes thinking-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.thinking-shimmer {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: thinking-shimmer 1.5s infinite;
+  border-radius: 4px;
 }

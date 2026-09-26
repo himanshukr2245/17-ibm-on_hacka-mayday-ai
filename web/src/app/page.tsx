@@ -1,24 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  ShieldAlert, 
-  Terminal, 
-  Cpu, 
-  CheckCircle2, 
-  XCircle, 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  Activity, 
-  Zap, 
-  FileText, 
-  GitPullRequest, 
-  Clock, 
-  Flame, 
-  Search, 
-  Layers, 
-  GitCommit, 
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  ShieldAlert,
+  Terminal,
+  Cpu,
+  CheckCircle2,
+  XCircle,
+  Play,
+  Pause,
+  RotateCcw,
+  Zap,
+  FileText,
+  GitPullRequest,
+  Clock,
+  Flame,
+  Search,
+  Layers,
+  GitCommit,
   AlertTriangle,
   ArrowRight,
   Sparkles,
@@ -27,12 +26,17 @@ import {
   Printer,
   Check,
   GitBranch,
-  History,
   Radio,
-  User,
-  Info
 } from 'lucide-react';
 import { sounds } from '../lib/audio';
+import { callHealAPI, callRunTestsAPI, DEMO_MODE } from '../lib/demoMode';
+import { useTypewriter } from '../lib/typewriter';
+import { saveIncidentToLocal } from '../db/local';
+
+function TypewriterText({ text }: { text: string }) {
+  const displayed = useTypewriter(text, 14);
+  return <span>{displayed}<span className="inline-block w-1.5 h-3 bg-blue-400 ml-0.5 animate-pulse align-middle" /></span>;
+}
 
 interface Hypothesis {
   agent: string;
@@ -634,11 +638,21 @@ export default function MaydayWarRoom() {
   const [speed, setSpeed] = useState<1 | 2 | 4>(2);
   const [step, setStep] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [mttrFrozen, setMttrFrozen] = useState<number | null>(null);
+  const [showCrownBanner, setShowCrownBanner] = useState(false);
+  const [confetti, setConfetti] = useState<{ id: number; x: number; y: number; color: string }[]>([]);
   const [activeTab, setActiveTab] = useState<'matrix' | 'diff' | 'tests' | 'postmortem'>('matrix');
   const [selectedIncident, setSelectedIncident] = useState<'A' | 'B' | 'C' | 'D'>('A');
 
   const currentIncident = INCIDENT_DATA[selectedIncident];
   const [detectives, setDetectives] = useState<Hypothesis[]>(currentIncident.detectives);
+
+  // Stale timeout cleanup ref — prevents ghost updates on incident switch
+  const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const clearAllTimeouts = () => {
+    timeoutRefs.current.forEach(clearTimeout);
+    timeoutRefs.current = [];
+  };
 
   // Black Box Git Timeline selected commit
   const [selectedCommit, setSelectedCommit] = useState<GitCommitItem>(
@@ -656,31 +670,57 @@ export default function MaydayWarRoom() {
   const [liveTestOutput, setLiveTestOutput] = useState<string | null>(null);
   const [liveTestPassed, setLiveTestPassed] = useState<boolean | null>(null);
   const [isHealing, setIsHealing] = useState(false);
+  const [isResettingAll, setIsResettingAll] = useState(false);
   const [copiedPostmortem, setCopiedPostmortem] = useState(false);
 
   // Check physical disk status on initial load
   const checkLiveDiskStatus = async () => {
     try {
-      const res = await fetch('/api/heal');
-      const data = await res.json();
-      if (data.success) {
-        setDiskStatus({ incidentA: data.incidentA, incidentB: data.incidentB });
+      const data = await callHealAPI('status', 'incident-a');
+      if (data.success && data.currentStatus) {
+        setDiskStatus(data.currentStatus);
       }
     } catch (e) {
       console.error('Failed to query disk status', e);
     }
   };
 
+  // Read URL params on mount: ?incident=A&autoplay=true
   useEffect(() => {
-    checkLiveDiskStatus();
+    const init = async () => {
+      await checkLiveDiskStatus();
+      const params = new URLSearchParams(window.location.search);
+      const incParam = params.get('incident') as 'A' | 'B' | 'C' | 'D' | null;
+      if (incParam && ['A', 'B', 'C', 'D'].includes(incParam)) {
+        switchIncident(incParam);
+      }
+      if (params.get('autoplay') === 'true') {
+        const id = setTimeout(() => {
+          setSpeed(4);
+          setTimeout(() => handleLaunchTriageSquad(), 200);
+        }, 500);
+        timeoutRefs.current.push(id);
+      }
+    };
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Switch incident
+  // Phase color sweep: update <html data-phase> for CSS variables
+  useEffect(() => {
+    const phase = step === 0 ? 'IDLE' : step < 3 ? 'RACING' : 'VERIFIED';
+    document.documentElement.dataset.phase = phase;
+  }, [step]);
+
+  // Switch incident — clear all stale timeouts first
   const switchIncident = (inc: 'A' | 'B' | 'C' | 'D') => {
+    clearAllTimeouts();
     setSelectedIncident(inc);
     setIsPlaying(false);
     setStep(0);
     setElapsedMs(0);
+    setMttrFrozen(null);
+    setShowCrownBanner(false);
     setDetectives(INCIDENT_DATA[inc].detectives);
     setSelectedCommit(
       INCIDENT_DATA[inc].commits.find((c) => c.type === 'CULPRIT') || INCIDENT_DATA[inc].commits[0]
@@ -691,9 +731,12 @@ export default function MaydayWarRoom() {
   };
 
   const resetInvestigation = () => {
+    clearAllTimeouts();
     setIsPlaying(false);
     setStep(0);
     setElapsedMs(0);
+    setMttrFrozen(null);
+    setShowCrownBanner(false);
     setDetectives(currentIncident.detectives);
     setSelectedCommit(
       currentIncident.commits.find((c) => c.type === 'CULPRIT') || currentIncident.commits[0]
@@ -703,14 +746,13 @@ export default function MaydayWarRoom() {
     checkLiveDiskStatus();
   };
 
-  // Run live Vitest via Node child_process
+  // Run live Vitest via Node child_process (or demo simulation)
   const runLiveTests = async () => {
     setLiveTestRunning(true);
     sounds.playTerminalClick();
     setActiveTab('tests');
     try {
-      const res = await fetch('/api/run-tests', { method: 'POST' });
-      const data = await res.json();
+      const data = await callRunTestsAPI();
       setLiveTestOutput(data.output);
       setLiveTestPassed(data.success);
       if (data.success) {
@@ -736,14 +778,9 @@ export default function MaydayWarRoom() {
     const target = currentIncident.targetParam;
 
     try {
-      const res = await fetch('/api/heal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, target }),
-      });
-      const data = await res.json();
-      setLiveTestOutput(data.output);
-      setLiveTestPassed(data.testsPassed);
+      const data = await callHealAPI(action, target);
+      setLiveTestOutput(data.output ?? null);
+      setLiveTestPassed(data.testsPassed ?? null);
 
       if (data.currentStatus) {
         setDiskStatus(data.currentStatus);
@@ -751,10 +788,10 @@ export default function MaydayWarRoom() {
 
       if (data.testsPassed) {
         sounds.playGreenChime();
-        setStep(3); // Crown fix verified
+        setStep(3);
       } else {
         sounds.playTestFailure();
-        setStep(1); // Incident active
+        setStep(1);
       }
     } catch (err: any) {
       setLiveTestOutput('Failed to mutate code: ' + err.message);
@@ -763,83 +800,125 @@ export default function MaydayWarRoom() {
     }
   };
 
+  // Reset all targets to healthy state
+  const resetAllTargets = async () => {
+    setIsResettingAll(true);
+    sounds.playTerminalClick();
+    try {
+      const data = await callHealAPI('reset-all', 'all');
+      if (data.currentStatus) setDiskStatus(data.currentStatus);
+      sounds.playGreenChime();
+    } catch {
+      // silent
+    } finally {
+      setIsResettingAll(false);
+    }
+  };
+
   // Real end-to-end Triage Squad Launch
   const handleLaunchTriageSquad = async () => {
     if (isPlaying) {
+      clearAllTimeouts();
       setIsPlaying(false);
       return;
     }
 
+    // Silently reset all targets before new triage sequence if not DEMO_MODE
+    if (!DEMO_MODE && step > 0) {
+      try { await callHealAPI('reset-all', 'all'); } catch { /* silent */ }
+    }
+
     setIsPlaying(true);
+    setElapsedMs(0);
+    setMttrFrozen(null);
+    setShowCrownBanner(false);
     sounds.playKlaxon();
 
-    // If Incident D (Honesty escalation), handle fast disproof
-    if (currentIncident.isEscalation) {
-      setTimeout(() => {
-        setStep(1);
-        sounds.playTestFailure();
-      }, 1000 / speed);
+    // Animation-only incidents: C (memory leak) and D (external outage / escalation)
+    const isAnimationOnly = currentIncident.isEscalation || currentIncident.id === 'INC-2043';
 
-      setTimeout(() => {
+    if (isAnimationOnly) {
+      const t1 = setTimeout(() => { setStep(1); sounds.playRadarPing(); }, 1200 / speed);
+      const t2 = setTimeout(() => { setStep(2); sounds.playTestFailure(); }, 3200 / speed);
+      const t3 = setTimeout(() => {
         setStep(3);
-        sounds.playRadarPing();
+        setMttrFrozen(5600 / speed);
+        setShowCrownBanner(true);
+        if (!currentIncident.isEscalation) {
+          setConfetti(Array.from({ length: 16 }, (_, i) => ({
+            id: Date.now() + i,
+            x: 20 + Math.random() * 60,
+            y: 10 + Math.random() * 50,
+            color: ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6'][i % 5],
+          })));
+          setTimeout(() => setConfetti([]), 1500);
+        }
+        setTimeout(() => setShowCrownBanner(false), 3000);
+        sounds.playGreenChime();
         setIsPlaying(false);
-      }, 2500 / speed);
+      }, 5600 / speed);
+      timeoutRefs.current.push(t1, t2, t3);
       return;
     }
 
     const target = currentIncident.targetParam;
-    const isCurrentlyFixed = selectedIncident === 'A' 
-      ? diskStatus.incidentA?.isFixed ?? true 
+    const isCurrentlyFixed = selectedIncident === 'A'
+      ? diskStatus.incidentA?.isFixed ?? true
       : diskStatus.incidentB?.isFixed ?? true;
 
-    // Step 1: If file is fixed, inject bug into disk first to demonstrate live triage
+    // If file is already patched, inject the bug first to demonstrate live triage
     if (isCurrentlyFixed) {
       setStep(0);
       try {
-        await fetch('/api/heal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'break', target }),
-        });
+        await callHealAPI('break', target);
         await checkLiveDiskStatus();
       } catch (e) {
         console.error(e);
       }
     }
 
-    // Advance to Step 1 (Detectives racing)
-    setTimeout(() => {
-      setStep(1);
-      sounds.playRadarPing();
-    }, 1200 / speed);
-
-    // Advance to Step 2 (Reproduction test failing)
-    setTimeout(async () => {
-      setStep(2);
-      sounds.playTestFailure();
-    }, 3200 / speed);
-
-    // Advance to Step 3 (Self-heal on disk and crown winner)
-    setTimeout(async () => {
+    const t1 = setTimeout(() => { setStep(1); sounds.playRadarPing(); }, 1200 / speed);
+    const t2 = setTimeout(() => { setStep(2); sounds.playTestFailure(); }, 3200 / speed);
+    const t3 = setTimeout(async () => {
       try {
-        const res = await fetch('/api/heal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'fix', target }),
-        });
-        const data = await res.json();
-        setLiveTestOutput(data.output);
-        setLiveTestPassed(data.testsPassed);
+        const data = await callHealAPI('fix', target);
+        setLiveTestOutput(data.output ?? null);
+        setLiveTestPassed(data.testsPassed ?? null);
         await checkLiveDiskStatus();
       } catch (e) {
         console.error(e);
       }
 
       setStep(3);
+      setMttrFrozen(5600 / speed);
+      setShowCrownBanner(true);
+      setConfetti(Array.from({ length: 16 }, (_, i) => ({
+        id: Date.now() + i,
+        x: 20 + Math.random() * 60,
+        y: 10 + Math.random() * 50,
+        color: ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6'][i % 5],
+      })));
+      setTimeout(() => setConfetti([]), 1500);
+      setTimeout(() => setShowCrownBanner(false), 3000);
       sounds.playGreenChime();
       setIsPlaying(false);
+
+      // Persist resolved incident to IndexedDB
+      saveIncidentToLocal({
+        id: currentIncident.id,
+        severity: currentIncident.severity as any,
+        title: currentIncident.title,
+        target: currentIncident.target,
+        alertSnippet: currentIncident.alertSnippet,
+        winner: currentIncident.winner,
+        detectives: detectives,
+        matrix: currentIncident.matrix,
+        diff: currentIncident.diff,
+        tests: currentIncident.tests,
+        postmortem: currentIncident.postmortem,
+      }).catch(() => {});
     }, 5600 / speed);
+    timeoutRefs.current.push(t1, t2, t3);
   };
 
   // Timer loop
@@ -893,8 +972,14 @@ export default function MaydayWarRoom() {
   };
 
   // Current disk file info
-  const currentDiskState = selectedIncident === 'A' ? diskStatus.incidentA : diskStatus.incidentB;
+  const currentDiskState =
+    selectedIncident === 'A' ? diskStatus.incidentA
+    : selectedIncident === 'B' ? diskStatus.incidentB
+    : undefined;
   const isTargetFixedOnDisk = currentDiskState?.isFixed ?? true;
+  // MTTR display: frozen on crown fix, live otherwise
+  const displayMs = mttrFrozen !== null ? mttrFrozen : elapsedMs;
+  const isCrownVerified = step >= 3 && !currentIncident.isEscalation && currentIncident.id !== 'INC-2044';
 
   // Copy Postmortem Markdown
   const copyPostmortemMarkdown = () => {
@@ -931,18 +1016,38 @@ ${currentIncident.postmortem.rejectionReason}
 
         {/* Center: MTTR Live Clock & Incident Switcher */}
         <div className="flex items-center gap-6">
-          <div className="bg-slate-900/90 border border-slate-700/60 rounded-xl px-4 py-1.5 flex items-center gap-3 shadow-inner">
-            <Clock className="w-4 h-4 text-amber-400 animate-spin" style={{ animationDuration: '4s' }} />
+          <div className={`relative border rounded-xl px-4 py-1.5 flex items-center gap-3 shadow-inner transition-all duration-500 ${
+            isCrownVerified
+              ? 'bg-emerald-950/40 border-emerald-500/60 shadow-emerald-500/10'
+              : 'bg-slate-900/90 border-slate-700/60'
+          }`}>
+            {/* Crown Fix Banner */}
+            {showCrownBanner && (
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-emerald-500 text-white text-[11px] font-black px-3 py-1 rounded-lg shadow-lg animate-bounce font-mono tracking-wide z-30">
+                👑 CROWN FIX VERIFIED
+              </div>
+            )}
+            {/* Confetti Particles */}
+            {confetti.map((c) => (
+              <div
+                key={c.id}
+                className="confetti-dot absolute w-2 h-2 rounded-sm pointer-events-none z-30"
+                style={{ left: `${c.x}%`, top: `${c.y}%`, background: c.color }}
+              />
+            ))}
+            <Clock className={`w-4 h-4 ${isCrownVerified ? 'text-emerald-400' : 'text-amber-400'} ${isPlaying ? 'animate-spin' : ''}`} style={{ animationDuration: '4s' }} />
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Live MTTR Clock</div>
-              <div className="font-mono font-bold text-lg text-white tabular-nums tracking-wider">
-                {formatTimer(elapsedMs)}
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                {isCrownVerified ? 'MTTR Frozen ✓' : 'Live MTTR Clock'}
+              </div>
+              <div className={`font-mono font-bold text-lg tabular-nums tracking-wider ${isCrownVerified ? 'text-emerald-400' : 'text-white'}`}>
+                {formatTimer(displayMs)}
               </div>
             </div>
           </div>
 
           {/* 4-Incident Selector Grid */}
-          <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-lg border border-slate-800">
+          <div className="hidden md:flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-lg border border-slate-800">
             <button 
               onClick={() => switchIncident('A')}
               className={`px-3 py-1.5 rounded text-xs font-medium transition ${
@@ -1042,7 +1147,11 @@ ${currentIncident.postmortem.rejectionReason}
             </span>
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-red-500/30 text-red-300 border border-red-500/50">
+                <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded border ${
+                  currentIncident.severity === 'SEV-1'
+                    ? 'bg-red-500/30 text-red-300 border-red-500/50 sev1-pulse'
+                    : 'bg-amber-500/30 text-amber-300 border-amber-500/50 sev2-pulse'
+                }`}>
                   {currentIncident.id} [{currentIncident.severity}]
                 </span>
                 <h1 className="font-bold text-white text-base">
@@ -1056,6 +1165,13 @@ ${currentIncident.postmortem.rejectionReason}
           </div>
 
           <div className="flex items-center gap-3 self-end md:self-auto">
+            {/* IBM Instana APM Badge */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 font-mono text-xs">
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+              <span className="text-blue-400 font-semibold">IBM Instana APM</span>
+              <span className="text-slate-400">· Connected</span>
+            </div>
+
             <div className="text-right">
               <div className="text-[10px] uppercase font-mono text-slate-400">Status</div>
               <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
@@ -1067,6 +1183,30 @@ ${currentIncident.postmortem.rejectionReason}
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 4-Step Progress Track */}
+        <div className="flex items-center bg-slate-900/40 border border-slate-800 rounded-xl overflow-hidden font-mono text-[11px]">
+          {[
+            { n: 0, label: 'AWAITING DISPATCH', icon: '⏳' },
+            { n: 1, label: '3 DETECTIVES RACING', icon: '🔍' },
+            { n: 2, label: 'INVARIANT PROOF MATRIX', icon: '🧪' },
+            { n: 3, label: currentIncident.isEscalation ? 'HONESTLY ESCALATED' : 'CROWN FIX VERIFIED', icon: currentIncident.isEscalation ? '⚠️' : '👑' },
+          ].map((s) => (
+            <div
+              key={s.n}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 transition-all duration-500 border-r last:border-r-0 border-slate-800 ${
+                step === s.n
+                  ? 'bg-blue-600/20 text-blue-300 font-bold border-b-2 border-b-blue-400'
+                  : step > s.n
+                  ? 'bg-emerald-950/30 text-emerald-400 font-semibold'
+                  : 'text-slate-600'
+              }`}
+            >
+              <span>{s.icon}</span>
+              <span className="hidden sm:inline">{s.label}</span>
+            </div>
+          ))}
         </div>
 
         {/* PROMINENT LIVE HOST MACHINE & DISK TELEMETRY DECK */}
@@ -1094,6 +1234,11 @@ ${currentIncident.postmortem.rejectionReason}
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                     STATUS: EXTERNAL CLOUD PARTNER (INTERNAL CODE UNTOUCHED)
                   </span>
+                ) : selectedIncident === 'C' ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[11px] font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                    STATUS: SIMULATED IN-MEMORY LEAK HARNESS
+                  </span>
                 ) : isTargetFixedOnDisk ? (
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -1109,12 +1254,12 @@ ${currentIncident.postmortem.rejectionReason}
             </div>
 
             {/* Direct Hardware Action Buttons */}
-            {!currentIncident.isEscalation && (
+            {!currentIncident.isEscalation && selectedIncident !== 'C' && (
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Break Button */}
                 <button
                   onClick={() => triggerHeal('break')}
-                  disabled={isHealing || liveTestRunning}
+                  disabled={isHealing || liveTestRunning || isResettingAll}
                   className="px-3.5 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/40 font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-red-950/40"
                   title="Modifies code file on disk to plant the exact bug and execute Vitest"
                 >
@@ -1124,7 +1269,7 @@ ${currentIncident.postmortem.rejectionReason}
                 {/* Fix Button */}
                 <button
                   onClick={() => triggerHeal('fix')}
-                  disabled={isHealing || liveTestRunning}
+                  disabled={isHealing || liveTestRunning || isResettingAll}
                   className="px-3.5 py-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-emerald-950/40"
                   title="Applies the IBM Bob 2.0 patch to file on disk and verifies all tests pass"
                 >
@@ -1134,7 +1279,7 @@ ${currentIncident.postmortem.rejectionReason}
                 {/* Live Vitest Button */}
                 <button
                   onClick={runLiveTests}
-                  disabled={liveTestRunning || isHealing}
+                  disabled={liveTestRunning || isHealing || isResettingAll}
                   className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-blue-600/30"
                   title="Directly executes 'npx vitest run' against targets/shopfront"
                 >
@@ -1148,6 +1293,20 @@ ${currentIncident.postmortem.rejectionReason}
                       <Play className="w-3.5 h-3.5 fill-current" />
                       <span>Run Machine Vitest</span>
                     </>
+                  )}
+                </button>
+
+                {/* Reset All Targets Button */}
+                <button
+                  onClick={resetAllTargets}
+                  disabled={isResettingAll || isHealing || liveTestRunning}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 border border-slate-700/60 font-mono text-xs font-bold transition flex items-center gap-1.5"
+                  title="Restores both target files to healthy patched state — use before live demo"
+                >
+                  {isResettingAll ? (
+                    <><RotateCcw className="w-3.5 h-3.5 animate-spin" /><span>Resetting...</span></>
+                  ) : (
+                    <><RotateCcw className="w-3.5 h-3.5" /><span>Reset All Targets</span></>
                   )}
                 </button>
               </div>
@@ -1181,10 +1340,10 @@ ${currentIncident.postmortem.rejectionReason}
                     : 'bg-[#0d121d] border-slate-800 hover:border-slate-700'
                 }`}
               >
-                {/* Stamp animation when Falsified */}
+                {/* Animated FALSIFIED stamp */}
                 {d.status === 'FALSIFIED' && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                    <div className="border-4 border-red-500/80 text-red-500 font-black text-2xl px-4 py-1 rounded-lg uppercase tracking-widest bg-black/60 shadow-2xl">
+                    <div className="stamp-falsified border-4 border-red-500/90 text-red-400 font-black text-2xl px-5 py-1.5 rounded-lg uppercase tracking-widest bg-black/70 shadow-2xl shadow-red-500/20">
                       FALSIFIED
                     </div>
                   </div>
@@ -1250,6 +1409,17 @@ ${currentIncident.postmortem.rejectionReason}
                   </div>
                 </div>
 
+                {/* AI Subagent Thinking Shimmer */}
+                {d.status === 'INVESTIGATING' && isPlaying && (
+                  <div className="mt-2 mb-2 space-y-1.5">
+                    <div className="thinking-shimmer w-full h-2" />
+                    <div className="thinking-shimmer w-3/4 h-2" />
+                    <div className="text-[10px] text-blue-400/60 font-mono animate-pulse">
+                      IBM Bob 2.0 analyzing...
+                    </div>
+                  </div>
+                )}
+
                 {/* Evidence / Reason Footer */}
                 <div className="pt-3 border-t border-slate-800/80 text-[11px] font-mono">
                   {d.falsifiedReason ? (
@@ -1260,13 +1430,60 @@ ${currentIncident.postmortem.rejectionReason}
                   ) : (
                     <div className="text-slate-400 flex items-start gap-1.5">
                       <Search className="w-3.5 h-3.5 mt-0.5 shrink-0 text-blue-400" />
-                      <span>{d.evidence}</span>
+                      <TypewriterText text={d.evidence} />
                     </div>
                   )}
                 </div>
               </div>
             ))}
           </div>
+
+          {/* 🧠 "What Would a Naive AI Do?" Comparison Panel — shown when RECON-2 is falsified */}
+          {step >= 2 && detectives[1]?.status === 'FALSIFIED' && currentIncident.id !== 'INC-2044' && (
+            <div className="mt-4 bg-amber-950/30 border border-amber-500/40 rounded-2xl p-4 shadow-xl">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">
+                  What Would a Generic LLM (GPT-4 / Copilot) Do Here?
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-[11px] text-slate-400 font-mono mb-1.5">❌ Generic LLM Band-Aid (applied in &lt;1s):</div>
+                  <div className="bg-black/70 rounded-xl p-3 border border-red-500/30 font-mono text-xs text-red-300 leading-relaxed">
+                    <span className="text-slate-500">// "Fixed: no more TypeError!"</span>{'\n'}
+                    <span className="text-red-300">const fee = (gatewayRaw as any).fee?.amount ?? 0;</span>{'\n'}
+                    <span className="text-slate-400">const total = req.amountDollars + fee;</span>
+                  </div>
+                  <div className="mt-2 text-xs text-red-400 font-mono flex items-center gap-1.5">
+                    <XCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>Result: Server returns 200 OK. Customer charged $10.00 — <strong>fee silently $0.00</strong></span>
+                  </div>
+                  <div className="text-[11px] text-red-500/80 font-mono mt-1 pl-5">
+                    40,000 txns/day × $0.29 missing = <strong className="text-red-400">$11,600 / day invisible revenue loss</strong>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-400 font-mono mb-1.5">✅ MAYDAY Crown Fix (invariant-verified):</div>
+                  <div className="bg-black/70 rounded-xl p-3 border border-emerald-500/30 font-mono text-xs text-emerald-300 leading-relaxed">
+                    <span className="text-slate-500">// Maps PayLink SDK v3.0 feeCents correctly</span>{'\n'}
+                    <span className="text-emerald-300">const fee = gatewayRaw.data.feeCents / 100;</span>{'\n'}
+                    <span className="text-slate-400">const total = req.amountDollars + fee;</span>
+                  </div>
+                  <div className="mt-2 text-xs text-emerald-400 font-mono flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Result: $10.29 charged. Business invariant preserved. Zero revenue loss.</span>
+                  </div>
+                  <div className="text-[11px] text-emerald-500/80 font-mono mt-1 pl-5">
+                    Cross-Examination Matrix: <strong className="text-emerald-400">8/8 invariant tests pass ✓</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-amber-500/20 text-[11px] text-amber-300/80 font-mono">
+                ⚡ MAYDAY enforces <strong>business-outcome assertions</strong>, not just "doesn't throw" — the only way to catch silent revenue leaks.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 🌟 FEATURE 1: INTERACTIVE BLACK BOX GIT COMMIT TIMELINE & CULPRIT LOCATOR */}
