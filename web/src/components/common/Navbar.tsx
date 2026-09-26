@@ -17,6 +17,8 @@ import {
   Menu,
   X,
   RotateCcw,
+  Wrench,
+  Home,
 } from 'lucide-react';
 import { sounds } from '../../lib/audio';
 import { callHealAPI, DEMO_MODE } from '../../lib/demoMode';
@@ -81,11 +83,13 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { href: '/', label: 'War Room', icon: Flame },
+    { href: '/', label: 'Overview', icon: Home },
+    { href: '/studio', label: 'Live Studio', icon: Wrench },
+    { href: '/war-room', label: 'War Room', icon: Flame },
     { href: '/incidents', label: 'Incidents', icon: Radio },
     { href: '/matrix', label: 'Matrix', icon: Layers },
     { href: '/bobalytics', label: 'Bobalytics', icon: Coins },
-    { href: '/simulator', label: 'Chaos Simulator', icon: FlaskConical },
+    { href: '/simulator', label: 'Simulator', icon: FlaskConical },
     { href: '/postmortem', label: 'Postmortems', icon: FileText },
   ];
 

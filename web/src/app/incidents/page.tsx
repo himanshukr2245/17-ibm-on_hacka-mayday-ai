@@ -16,10 +16,10 @@ import { sounds } from '../../lib/audio';
 
 // Maps each incident to its War Room selector param
 const INCIDENT_WAR_ROOM: Record<string, string> = {
-  'INC-2041': '/?incident=A',
-  'INC-2042': '/?incident=B',
-  'INC-2043': '/?incident=C',
-  'INC-2044': '/?incident=D',
+  'INC-2041': '/war-room?incident=A',
+  'INC-2042': '/war-room?incident=B',
+  'INC-2043': '/war-room?incident=C',
+  'INC-2044': '/war-room?incident=D',
 };
 
 interface IncidentItem {
