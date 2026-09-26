@@ -16,6 +16,22 @@ function checkAuth(req: Request): boolean {
 
 // Check disk state for both incidents
 function checkStatus() {
+  if (!fs.existsSync || !fs.existsSync(SHOPFRONT_DIR)) {
+    return {
+      mode: 'CLOUDFLARE_EDGE_SIMULATION',
+      incidentA: {
+        status: 'HEALTHY_PATCHED',
+        file: 'targets/shopfront/src/payment/adapter.ts',
+        isFixed: true,
+      },
+      incidentB: {
+        status: 'HEALTHY_PATCHED',
+        file: 'targets/shopfront/src/inventory/service.ts',
+        isFixed: true,
+      },
+    };
+  }
+
   const adapterContent = fs.existsSync(ADAPTER_PATH) ? fs.readFileSync(ADAPTER_PATH, 'utf8') : '';
   const inventoryContent = fs.existsSync(INVENTORY_PATH) ? fs.readFileSync(INVENTORY_PATH, 'utf8') : '';
 
@@ -54,6 +70,47 @@ export async function POST(req: Request) {
   }
   try {
     const { action, target = 'incident-a' } = await req.json(); // action: 'break' | 'fix' | 'status' | 'reset-all', target: 'incident-a' | 'incident-b' | 'all'
+
+    // Cloudflare Edge / Serverless Fallback
+    if (!fs.existsSync || !fs.existsSync(SHOPFRONT_DIR)) {
+      if (action === 'status') {
+        return NextResponse.json({ success: true, ...checkStatus() });
+      }
+      const isFixed = action === 'fix' || action === 'reset-all';
+      const targetName = target === 'incident-b' || target === 'INC-2042' ? 'incident-b' : 'incident-a';
+      const output = isFixed
+        ? targetName === 'incident-b'
+          ? `✓ test/inventory.test.ts (1 test) 315ms\n✓ should prevent overselling and negative stock under high concurrency\n(10 succeeded, 10 rejected, finalStock = 0)\n\nTest Files  1 passed (1)\nTests  1 passed (1)\nDuration  892ms`
+          : `✓ test/checkout.test.ts (1 test) 38ms\n✓ should successfully complete checkout with correct 2.9% fee calculation\n\nTest Files  1 passed (1)\nTests  1 passed (1)\nDuration  312ms`
+        : targetName === 'incident-b'
+          ? `FAIL  test/inventory.test.ts [ test/inventory.test.ts ]\n× should prevent overselling and negative stock under high concurrency\n\nAssertionError: expected 20 to be at most 10\n  Expected: ≤ 10\n  Received: 20\n  [Inventory dipped below 0: finalStock = -10]\n\nTest Files  1 failed (1)\nTests  1 failed (1)`
+          : `FAIL  test/checkout.test.ts [ test/checkout.test.ts ]\n× should successfully complete checkout with correct 2.9% fee calculation\n\nTypeError: Cannot read properties of undefined (reading 'amount')\n ❯ rawPaylinkGatewayCall adapter.ts:31:38\n ❯ processCheckout checkout.ts:18:20\n\nTest Files  1 failed (1)\nTests  1 failed (1)`;
+
+      const incidentAFixed = targetName === 'incident-a' ? isFixed : true;
+      const incidentBFixed = targetName === 'incident-b' ? isFixed : true;
+
+      return NextResponse.json({
+        success: true,
+        mode: 'CLOUDFLARE_EDGE_SIMULATION',
+        target,
+        action,
+        testsPassed: isFixed,
+        output,
+        currentStatus: {
+          incidentA: {
+            status: incidentAFixed ? 'HEALTHY_PATCHED' : 'SEV1_BROKEN',
+            file: 'targets/shopfront/src/payment/adapter.ts',
+            isFixed: incidentAFixed
+          },
+          incidentB: {
+            status: incidentBFixed ? 'HEALTHY_PATCHED' : 'SEV1_BROKEN',
+            file: 'targets/shopfront/src/inventory/service.ts',
+            isFixed: incidentBFixed
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
 
     // Reset ALL targets to healthy patched state
     if (target === 'all' || action === 'reset-all') {

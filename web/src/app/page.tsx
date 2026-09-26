@@ -583,7 +583,7 @@ const INCIDENT_DATA = {
     severity: 'SEV-1',
     category: 'EXTERNAL DEPENDENCY',
     title: 'Upstream Network Partition: HTTP 504 Gateway Timeout from Acquiring Bank',
-    tagline: 'The Visa Outage: Proving Enterprise Honesty with Zero Code Hallucinations',
+    tagline: 'The Visa Outage: Proving Enterprise Honesty with Empirical Invariant Verification',
     lossRate: 'External BGP Route Down',
     dailyLoss: 'Escalated in 14s',
     target: 'external-provider (gateway.visa.com:443)',

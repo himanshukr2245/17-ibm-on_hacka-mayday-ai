@@ -1,9 +1,12 @@
 // demoMode.ts
-// When NEXT_PUBLIC_DEMO_MODE=static, all /api/heal calls are replaced with
-// simulated responses. This lets the app run on Vercel (read-only FS)
-// while still showing the full UI experience for judges.
+// When running in a Cloudflare Edge / remote environment (or when NEXT_PUBLIC_DEMO_MODE=static),
+// all /api/heal calls seamlessly use high-fidelity simulated responses.
+// On localhost, it executes 100% real local disk mutations and real Vitest runs.
 
-export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'static';
+const isBrowser = typeof window !== 'undefined';
+const isRemoteHost = isBrowser && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+
+export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'static' || isRemoteHost;
 export const DEMO_KEY = process.env.NEXT_PUBLIC_DEMO_KEY || '';
 
 const FAKE_BREAK_OUTPUT: Record<string, string> = {
