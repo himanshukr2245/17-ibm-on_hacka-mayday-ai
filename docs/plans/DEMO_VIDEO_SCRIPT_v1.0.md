@@ -16,13 +16,11 @@
 ```text
 Welcome to MAYDAY... our Autonomous AI Incident Commander powered by the IBM Bob 2.0 multi-agent architecture.
 
-Here on our main overview page... right at the top, notice this glowing red emergency bar. It shows that a critical 3:00 AM production outage has just hit an enterprise shopping website.
+Imagine it’s 3:00 AM... and your e-commerce platform just suffered a fatal production outage.
 
-Next to it, we have a mode switcher. Users can choose Golden Demo Mode for smooth presentations, or Real Host Disk Mode, which physically edits real files on our hard drive.
+That’s where MAYDAY comes in. Instead of waking up a sleepy engineer at 3:00 AM... MAYDAY immediately analyzes the crash using three AI agents running in parallel on the same error. Each agent investigates from a different perspective... and after cross-verifying their findings, MAYDAY delivers the single most reliable solution.
 
-Here in the center, we have an interactive crisis preview. Instead of waking up a tired engineer at 3:00 AM, MAYDAY intercepts the alert in twelve milliseconds... launches three competing AI detectives... rejects dangerous fake fixes... and heals the code directly on disk in under thirty-eight seconds.
-
-Below this, we show how real companies integrate MAYDAY: via automated Webhooks, in our Web Diagnostic Studio, or inside the IBM Bob terminal.
+This is our Overview page. Here, you can see what this app does, who it's for, and how companies use it.
 
 Now, let’s click this red button and jump directly into the live War Room cockpit!
 ```
@@ -115,10 +113,10 @@ Thank you.
 
 | Time | What to Say (ElevenLabs Audio) | What to do on Screen (Video Actions) |
 | :--- | :--- | :--- |
-| **0:00 – 0:10** | *Part 1: Welcome & Overview Page* | Land on `http://localhost:3000/`. Smooth 2-second pause on the hero title. Point mouse to the glowing red **🚨 3:00 AM INCIDENT OUTAGE** ribbon. |
-| **0:10 – 0:20** | *Part 1: Mode Switcher* | Hover over the top-right toggle showing **🎮 Golden Demo Mode** and **⚡ Real Host Disk Mode**. |
-| **0:20 – 0:32** | *Part 1: Crisis Preview Widget* | Scroll down slightly to the **Live Crisis Interception Simulator** widget. Click **▶️ Simulate 3:00 AM Alert** and let the 4 steps animate (Alert → Detectives → Falsification → Healed). |
-| **0:32 – 0:40** | *Part 1: Integration Tabs & CTA* | Scroll past the 3 integration tabs (Webhooks, Studio, CLI). Hover over the red button **"🎮 Start 60-Second Guided Tour"** and click it. |
+| **0:00 – 0:08** | *Part 1: Welcome & Setup* | Land on `http://localhost:3000/`. Smooth 2-second pause on the hero title **MAYDAY**. |
+| **0:08 – 0:16** | *Part 1: 3:00 AM Crisis* | Move mouse cursor smoothly to the glowing red **🚨 3:00 AM INCIDENT OUTAGE** emergency ribbon. |
+| **0:16 – 0:28** | *Part 1: 3 Parallel Agents* | Scroll slightly to the interactive crisis simulator showing the 3 AI detective icons. |
+| **0:28 – 0:38** | *Part 1: Overview & Entry* | Show the overview page cards, hover over the red button **"🎮 Start 60-Second Guided Tour"**, and click it at the 0:37 mark. |
 | **0:40 – 01:15** | *Part 2: War Room Autopilot* | Land on `/war-room`. Click **"⚡ 60-Second Guided Auto-Pilot Tour"**. Point mouse to the ticking MTTR clock and the red revenue bleed counter (`-$14.50/s`). Point to the 3 detective cards streaming in parallel. |
 | **01:15 – 01:50** | *Part 2: Falsification & Victory* | Watch Recon-3 get stamped with the red **FALSIFIED** badge. Show Recon-1 confirm the SDK bump. Show Vitest running live, the green victory banner appearing, and MTTR freezing at **38 seconds**. Click **"Matrix"** in top navbar. |
 | **01:50 – 02:25** | *Part 3: Matrix & Hall of Shame* | Land on `/matrix`. Scroll down to the **Hall of Shame** comparison. Highlight the red bad fix (`?? 0`) and show the text explaining $12,400 in silent losses. Show the green Crown Fix passing all 4 invariant gates. Click **"Studio & Lab"** in navbar. |
