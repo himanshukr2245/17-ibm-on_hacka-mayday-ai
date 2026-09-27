@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 
+export const dynamic = 'force-static';
+
 const ADAPTER_PATH = path.resolve(process.cwd(), '../targets/shopfront/src/payment/adapter.ts');
 const INVENTORY_PATH = path.resolve(process.cwd(), '../targets/shopfront/src/inventory/service.ts');
 const SHOPFRONT_DIR = path.resolve(process.cwd(), '../targets/shopfront');
