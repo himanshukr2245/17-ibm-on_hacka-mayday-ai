@@ -9,16 +9,17 @@ import {
   Layers, 
   Coins, 
   FileText, 
-  FlaskConical, 
   Volume2, 
   VolumeX, 
-  Flame,
-  Radio,
-  Menu,
-  X,
-  RotateCcw,
-  Wrench,
+  Flame, 
+  Menu, 
+  X, 
+  Wrench, 
   Home,
+  Clock,
+  Sparkles,
+  Activity,
+  Radio,
 } from 'lucide-react';
 import { sounds } from '../../lib/audio';
 import { callHealAPI, DEMO_MODE } from '../../lib/demoMode';
@@ -84,137 +85,211 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Overview', icon: Home },
-    { href: '/war-room', label: 'War Room', icon: Flame },
-    { href: '/studio', label: 'Studio & Chaos Lab', icon: Wrench },
-    { href: '/matrix', label: 'Benchmark Matrix', icon: Layers },
+    { href: '/war-room', label: 'War Room', icon: Flame, badge: 'SEV-1' },
+    { href: '/studio', label: 'Studio & Lab', icon: Wrench },
+    { href: '/matrix', label: 'Matrix', icon: Layers },
     { href: '/bobalytics', label: 'Bobalytics', icon: Coins },
     { href: '/postmortem', label: 'Postmortems', icon: FileText },
   ];
 
-  const healthBadge = systemHealth === 'HEALTHY'
-    ? { label: 'ALL SYSTEMS GO', cls: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400', dotCls: 'bg-emerald-400' }
+  const healthConfig = systemHealth === 'HEALTHY'
+    ? {
+        label: 'ALL SYSTEMS GO',
+        badgeCls: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+        dotCls: 'bg-emerald-400 shadow-emerald-500/50',
+      }
     : systemHealth === 'SEV-1'
-    ? { label: 'SEV-1 ACTIVE', cls: 'bg-red-500/10 border-red-500/30 text-red-400', dotCls: 'bg-red-500 animate-ping' }
-    : { label: 'CONNECTING…', cls: 'bg-slate-700/20 border-slate-700/30 text-slate-400', dotCls: 'bg-slate-500' };
+    ? {
+        label: 'SEV-1 ACTIVE',
+        badgeCls: 'bg-red-500/15 border-red-500/40 text-red-400',
+        dotCls: 'bg-red-500 animate-ping shadow-red-500/50',
+      }
+    : {
+        label: 'TELEMETRY LIVE',
+        badgeCls: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
+        dotCls: 'bg-blue-400',
+      };
 
   return (
-    <header ref={mobileNavRef} className="relative border-b border-slate-800/80 bg-[#0a0e17]/95 backdrop-blur-md sticky top-0 z-50 shadow-2xl">
-      <div className="px-6 py-2.5 flex items-center justify-between">
-        {/* Brand & Identity */}
-        <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <span className="p-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 group-hover:bg-red-500/20 transition shadow-lg shadow-red-500/10">
-              <ShieldAlert className="w-5 h-5 animate-pulse" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold tracking-wider text-white text-base flex items-center gap-1.5 font-mono">
-                  MAYDAY <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-red-500/20 text-red-400 border border-red-500/30">WAR ROOM</span>
-                </span>
-                <span className="text-[11px] text-slate-400 hidden xl:inline">| Autonomous Incident Commander</span>
+    <header
+      ref={mobileNavRef}
+      className="relative sticky top-0 z-50 bg-[#07090e]/85 backdrop-blur-xl border-b border-white/[0.08] shadow-2xl transition-all duration-300"
+    >
+      {/* Precision Top Glow Beam */}
+      <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-blue-500/50 via-rose-500/40 to-transparent pointer-events-none" />
+
+      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        {/* ========================================================================= */}
+        {/* 1. BRAND & COCKPIT IDENTITY (LEFT)                                        */}
+        {/* ========================================================================= */}
+        <div className="flex items-center gap-3 shrink-0">
+          <Link
+            href="/"
+            prefetch={false}
+            onClick={() => sounds.playTerminalClick()}
+            className="flex items-center gap-3 group cursor-pointer"
+          >
+            {/* Holographic Radar Shield */}
+            <div className="relative flex items-center justify-center">
+              <span className="absolute -inset-1 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-blue-600 opacity-25 group-hover:opacity-75 blur-sm transition-all duration-300" />
+              <div className="relative p-2 rounded-xl bg-gradient-to-b from-[#181119] via-[#0f121d] to-[#090b12] border border-red-500/30 group-hover:border-red-400/60 transition shadow-inner">
+                <ShieldAlert className="w-5 h-5 text-red-400 group-hover:scale-110 transition-transform duration-300" />
               </div>
-              <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5">
-                <span className="text-blue-400 font-semibold flex items-center gap-1">
-                  <Cpu className="w-3 h-3" /> IBM Bob 2.0 Powered
+            </div>
+
+            {/* Typography & Sub-Badge */}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-black text-white text-base tracking-wider flex items-center gap-1.5 group-hover:text-blue-300 transition-colors">
+                  MAYDAY
                 </span>
-                {DEMO_MODE && (
-                  <span className="text-amber-400/70 text-[9px]">· Static Demo Mode</span>
-                )}
+                <span className="px-1.5 py-0.5 rounded font-mono text-[9px] font-black uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/40 shadow-sm shadow-red-950/50">
+                  WAR ROOM
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
+                <span className="text-blue-400 font-semibold flex items-center gap-1">
+                  <Cpu className="w-3 h-3 text-blue-400" /> IBM Bob 2.0
+                </span>
+                <span className="text-slate-600 hidden sm:inline">•</span>
+                <span className="text-emerald-400/90 hidden sm:flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Self-Healing SRE
+                </span>
               </div>
             </div>
           </Link>
         </div>
 
-        {/* Main Navigation Tabs — desktop only */}
-        <nav className="hidden md:flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800/90 shadow-inner">
+        {/* ========================================================================= */}
+        {/* 2. CENTER DOCK: FLOATING HIGH-TECH NAVIGATION ISLAND                     */}
+        {/* ========================================================================= */}
+        <nav className="hidden lg:flex items-center bg-[#0d121f]/90 p-1 rounded-full border border-slate-800/80 shadow-2xl backdrop-blur-xl ring-1 ring-white/[0.04]">
           {navLinks.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 prefetch={false}
-                onClick={() => { sounds.playTerminalClick(); setMobileOpen(false); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition ${
+                onClick={() => {
+                  sounds.playTerminalClick();
+                  setMobileOpen(false);
+                }}
+                className={`relative px-3.5 py-1.5 rounded-full text-xs font-mono font-semibold flex items-center gap-2 transition-all duration-200 whitespace-nowrap cursor-pointer ${
                   isActive
-                    ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                    ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 text-white shadow-lg shadow-blue-600/30 border border-blue-400/40'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.06]'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                 <span>{item.label}</span>
+
+                {/* Optional SEV-1 Badge Indicator on War Room */}
+                {item.badge && !isActive && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-red-500/20 text-red-400 text-[9px] font-bold border border-red-500/30 flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-red-400 animate-ping" />
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Right HUD Controls */}
-        <div className="flex items-center gap-3">
-          {/* Dynamic System Health Beacon */}
-          <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold ${healthBadge.cls}`}>
-            <span className={`w-2 h-2 rounded-full ${healthBadge.dotCls}`}></span>
-            <span className="hidden sm:inline">{healthBadge.label}</span>
+        {/* ========================================================================= */}
+        {/* 3. RIGHT HUD CONTROLS: TELEMETRY & ACOUSTICS (RIGHT)                      */}
+        {/* ========================================================================= */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Real-time System Status Beacon */}
+          <div
+            className={`px-3 py-1.5 rounded-xl border text-[11px] font-mono font-bold flex items-center gap-2 shadow-sm transition-all duration-300 ${healthConfig.badgeCls}`}
+          >
+            <div className="relative flex items-center justify-center">
+              <span className={`w-2 h-2 rounded-full ${healthConfig.dotCls}`} />
+            </div>
+            <span className="hidden sm:inline tracking-wider">{healthConfig.label}</span>
           </div>
 
-          {/* IBM Instana Micro-Badge */}
-          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-blue-900/50 bg-blue-500/5 font-mono text-[11px] text-blue-400/80">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-            <span>IBM Instana</span>
+          {/* IBM Instana Telemetry Chip */}
+          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-900/60 bg-blue-950/20 font-mono text-[11px] text-blue-300 shadow-inner">
+            <Radio className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+            <span>Instana Hook</span>
           </div>
 
-          {/* Audio Toggle */}
+          {/* Live UTC Monospace Clock */}
+          <div className="hidden md:flex items-center gap-1.5 font-mono text-xs text-slate-300 bg-slate-900/80 border border-slate-800/80 px-3 py-1.5 rounded-xl shadow-inner">
+            <Clock className="w-3 h-3 text-cyan-400" />
+            <span>{time || '00:00:00 UTC'}</span>
+          </div>
+
+          {/* Acoustic Audio Toggle */}
           <button
+            type="button"
             onClick={toggleSound}
             title={isMuted ? 'Unmute Acoustics' : 'Mute Acoustics'}
-            className={`p-2 rounded-lg border transition ${
+            className={`p-2 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-center ${
               isMuted
                 ? 'bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300'
-                : 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 shadow-md shadow-emerald-950/30'
             }`}
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
 
-          {/* Live UTC Clock — hidden on mobile */}
-          <div className="hidden sm:block font-mono text-xs text-slate-400 bg-slate-900/60 border border-slate-800 px-2.5 py-1.5 rounded-lg">
-            {time || '00:00:00 UTC'}
-          </div>
-
-          {/* Mobile Hamburger */}
+          {/* Mobile Hamburger Menu Toggle */}
           <button
-            className="md:hidden p-2 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-400 hover:text-white transition"
+            type="button"
+            className="lg:hidden p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle navigation"
           >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileOpen ? <X className="w-5 h-5 text-red-400" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Dropdown Nav */}
+      {/* ========================================================================= */}
+      {/* 4. MOBILE DROPDOWN DOCK                                                    */}
+      {/* ========================================================================= */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-slate-800 bg-[#0a0e17]/98 z-40">
-          {navLinks.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                prefetch={false}
-                onClick={() => { setMobileOpen(false); sounds.playTerminalClick(); }}
-                className={`flex items-center gap-3 px-6 py-3.5 text-sm border-b border-slate-800/50 transition ${
-                  isActive
-                    ? 'bg-blue-600/10 text-blue-400 font-semibold'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/40'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+        <div className="lg:hidden border-t border-slate-800/90 bg-[#07090e]/98 backdrop-blur-2xl p-4 space-y-2 animate-in slide-in-from-top duration-200">
+          <div className="grid grid-cols-2 gap-2">
+            {navLinks.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  prefetch={false}
+                  onClick={() => {
+                    setMobileOpen(false);
+                    sounds.playTerminalClick();
+                  }}
+                  className={`p-3 rounded-xl border text-xs font-mono font-bold flex items-center gap-2.5 transition ${
+                    isActive
+                      ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-600/30'
+                      : 'bg-slate-900/60 border-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-slate-400 px-1">
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3 h-3 text-cyan-400" /> {time}
+            </span>
+            <span className="text-blue-400 font-bold">IBM Bob 2.0 Engine</span>
+          </div>
         </div>
       )}
     </header>
