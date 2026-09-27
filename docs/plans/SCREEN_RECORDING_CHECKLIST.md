@@ -23,12 +23,14 @@ Use this checklist before and during screen recording to capture clean, high-def
 
 ## 2. Step-by-Step Recording Sequence (Sync Guide)
 
-### Part 1: The Overview Command Center (`0:00 – 0:35`)
+### Part 1: The Overview Command Center (`0:00 – 0:40`)
 - [ ] Start on `http://localhost:3000/`.
 - [ ] Hold static for 2 seconds on the hero title: **MAYDAY: Autonomous AI Incident Commander**.
-- [ ] Point the mouse cursor smoothly to the crimson **SEV-1 ACTIVE** ribbon.
-- [ ] Scroll smoothly through the 4-step crisis lifecycle (Alert → Detectives → Falsification → Physical Disk Healed).
-- [ ] Hover over **"Open War Room Cockpit"** and click it at the 0:34 mark.
+- [ ] Move mouse cursor smoothly to the glowing red **🚨 3:00 AM INCIDENT OUTAGE** emergency ribbon.
+- [ ] Hover cursor over the mode switcher: **🎮 Golden Demo Mode** and **⚡ Real Host Disk Mode**.
+- [ ] Scroll down to the **Live Crisis Interception Simulator** widget. Click the **▶️ Simulate 3:00 AM Alert** button and watch the 4 progression steps light up (Alert → Detectives → Falsification → Healed).
+- [ ] Scroll past the 3 integration tabs (Webhooks, Studio, CLI).
+- [ ] Hover over the red button **"🎮 Start 60-Second Guided Tour"** and click it at the 0:38 mark to jump into the War Room.
 
 ### Part 2: The War Room Cockpit (`0:35 – 01:45`)
 - [ ] Land on `/war-room`.
