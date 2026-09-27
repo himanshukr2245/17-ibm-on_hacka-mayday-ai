@@ -78,23 +78,6 @@ const CANDIDATES: Candidate[] = [
     verdict: 'CROWNED',
     verdictReason: 'Serializes operations per-SKU, guaranteeing zero overselling and strict non-negative warehouse balance.',
     financialRisk: '$0.00 (Zero overselling)'
-  },
-  {
-    id: 'patch-4',
-    name: 'RECON-4: Exponential Backoff Retries',
-    author: 'Resilience Detective (Decoy)',
-    codeSnippet: 'for (let attempt = 0; attempt < 3; attempt++) {\n  try { return await reserveStock(sku, qty); }\n  catch { await delay(Math.pow(2, attempt) * 50); }\n}',
-    reproFee: 'PASS',
-    reproFeeDetail: 'No fee impact',
-    reproRace: 'FAIL',
-    reproRaceDetail: 'FAILED: 20 Succeeded, Stock = -10 (Oversold)',
-    crashPrevention: 'FAIL',
-    crashDetail: 'Exhausts database connection pool',
-    regressionSuite: 'FAIL',
-    regressionDetail: 'FAILED: inventory.test.ts invariant broken',
-    verdict: 'REJECTED',
-    verdictReason: 'Retrying failed requests re-submits stale inventory state into the critical section, exacerbating the race condition 2×!',
-    financialRisk: '$24,000 in oversold physical inventory'
   }
 ];
 
@@ -141,7 +124,7 @@ export default function MatrixPage() {
       </div>
 
       {/* Candidate Selector Tabs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {CANDIDATES.map((c) => {
           const isSelected = selectedCandidate.id === c.id;
           return (
