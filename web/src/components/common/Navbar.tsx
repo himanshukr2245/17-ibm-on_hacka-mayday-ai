@@ -31,13 +31,19 @@ export default function Navbar() {
 
   // Click outside to close mobile menu
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
       if (mobileNavRef.current && !mobileNavRef.current.contains(e.target as Node)) {
         setMobileOpen(false);
       }
     }
-    if (mobileOpen) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    if (mobileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [mobileOpen]);
 
   // Live UTC clock

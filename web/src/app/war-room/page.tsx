@@ -732,6 +732,7 @@ export default function MaydayWarRoom() {
 
   // Stale timeout cleanup ref — prevents ghost updates on incident switch
   const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const hasInitializedRef = useRef(false);
   const clearAllTimeouts = () => {
     timeoutRefs.current.forEach(clearTimeout);
     timeoutRefs.current = [];
@@ -1088,8 +1089,11 @@ export default function MaydayWarRoom() {
     timeoutRefs.current.push(t1, t2, t3);
   }, [isPlaying, step, speed, soundEnabled, currentIncident, selectedIncident, diskStatus, detectives]);
 
-  // ─── Read URL params on mount — NOW SAFE: switchIncident & handleLaunchTriageSquad already declared ───
+  // ─── Read URL params on mount — RUNS STRICTLY ONCE ON INITIAL LOAD ───
   useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     const init = async () => {
       await checkLiveDiskStatus();
 
@@ -1122,7 +1126,7 @@ export default function MaydayWarRoom() {
       }
     };
     init();
-  }, [switchIncident, handleLaunchTriageSquad]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Phase color sweep: update <html data-phase> for CSS variables
   useEffect(() => {
