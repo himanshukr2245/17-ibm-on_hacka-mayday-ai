@@ -97,7 +97,7 @@ export default function MatrixPage() {
       } else {
         sounds.playTestFailure();
       }
-    }, 400);
+    }, 180);
   };
 
   return (
@@ -130,8 +130,9 @@ export default function MatrixPage() {
           return (
             <button
               key={c.id}
+              type="button"
               onClick={() => handleSelect(c)}
-              className={`p-4 rounded-xl border text-left transition relative overflow-hidden ${
+              className={`p-4 rounded-xl border text-left transition relative overflow-hidden cursor-pointer touch-manipulation select-none active:scale-[0.98] ${
                 isSelected
                   ? c.verdict === 'CROWNED'
                     ? 'bg-emerald-950/30 border-emerald-500/60 shadow-lg shadow-emerald-500/10'

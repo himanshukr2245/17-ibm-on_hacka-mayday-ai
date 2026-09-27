@@ -1406,8 +1406,9 @@ ${currentIncident.postmortem.rejectionReason}
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* 🚀 Autopilot Tour Button */}
             <button
+              type="button"
               onClick={startAutopilotTour}
-              className="px-4 py-2.5 rounded-xl font-bold text-xs font-mono flex items-center gap-2 transition shadow-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 shadow-purple-600/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              className="px-4 py-2.5 rounded-xl font-bold text-xs font-mono flex items-center gap-2 transition shadow-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 shadow-purple-600/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer touch-manipulation"
               title="Runs an automated guided tour showing the entire self-healing workflow (T)"
             >
               <Sparkles className="w-4 h-4 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
@@ -1416,8 +1417,9 @@ ${currentIncident.postmortem.rejectionReason}
 
             {/* Launch Triage Squad Playback */}
             <button
+              type="button"
               onClick={handleLaunchTriageSquad}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs font-mono flex items-center gap-2 transition shadow-xl ${
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs font-mono flex items-center gap-2 transition shadow-xl cursor-pointer touch-manipulation ${
                 isPlaying
                   ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30'
                   : 'bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-500 hover:to-rose-500 shadow-red-600/30'
@@ -1430,8 +1432,9 @@ ${currentIncident.postmortem.rejectionReason}
 
             {/* Reset Simulation */}
             <button
+              type="button"
               onClick={resetInvestigation}
-              className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer touch-manipulation"
               title="Reset Simulation (R)"
             >
               <RotateCcw className="w-4 h-4" />
@@ -1442,8 +1445,9 @@ ${currentIncident.postmortem.rejectionReason}
               {([1, 2, 4] as const).map((s) => (
                 <button
                   key={s}
+                  type="button"
                   onClick={() => setSpeed(s)}
-                  className={`px-2.5 py-1.5 rounded-lg transition ${
+                  className={`px-2.5 py-1.5 rounded-lg transition cursor-pointer touch-manipulation ${
                     speed === s ? 'bg-slate-700 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
@@ -1826,9 +1830,10 @@ ${currentIncident.postmortem.rejectionReason}
                 <>
                   {/* Break Code on Disk */}
                   <button
+                    type="button"
                     onClick={() => triggerHeal('break')}
                     disabled={isHealing || liveTestRunning || isResettingAll}
-                    className="px-4 py-2.5 rounded-xl bg-red-950/50 hover:bg-red-900/60 text-red-200 border border-red-500/50 font-mono text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-red-950/50 hover:scale-[1.02] active:scale-[0.98]"
+                    className="px-4 py-2.5 rounded-xl bg-red-950/50 hover:bg-red-900/60 text-red-200 border border-red-500/50 font-mono text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-red-950/50 hover:scale-[1.02] active:scale-[0.98] cursor-pointer touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Physically edits target file on your SSD to broken state and executes Vitest"
                   >
                     <span>💣 Break Code on Disk</span>
@@ -1836,9 +1841,10 @@ ${currentIncident.postmortem.rejectionReason}
 
                   {/* Auto-Heal (Bob 2.0 Fix) */}
                   <button
+                    type="button"
                     onClick={() => triggerHeal('fix')}
                     disabled={isHealing || liveTestRunning || isResettingAll}
-                    className="px-4 py-2.5 rounded-xl bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-200 border border-emerald-500/50 font-mono text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-950/50 hover:scale-[1.02] active:scale-[0.98]"
+                    className="px-4 py-2.5 rounded-xl bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-200 border border-emerald-500/50 font-mono text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-950/50 hover:scale-[1.02] active:scale-[0.98] cursor-pointer touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Physically writes the Bob 2.0 crown fix to your SSD and verifies tests pass"
                   >
                     <span>🩹 Auto-Heal (Bob 2.0 Fix)</span>
@@ -1846,9 +1852,10 @@ ${currentIncident.postmortem.rejectionReason}
 
                   {/* Run Machine Vitest */}
                   <button
+                    type="button"
                     onClick={runLiveTests}
                     disabled={liveTestRunning || isHealing || isResettingAll}
-                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold transition flex items-center gap-2 shadow-xl shadow-blue-600/30 hover:scale-[1.02] active:scale-[0.98]"
+                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold transition flex items-center gap-2 shadow-xl shadow-blue-600/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Directly executes 'npx vitest run' via Node child_process"
                   >
                     {liveTestRunning ? (
@@ -1868,9 +1875,10 @@ ${currentIncident.postmortem.rejectionReason}
 
               {/* Reset All Targets Button */}
               <button
+                type="button"
                 onClick={resetAllTargets}
                 disabled={isResettingAll || isHealing || liveTestRunning}
-                className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono text-xs font-bold transition flex items-center gap-2"
+                className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono text-xs font-bold transition flex items-center gap-2 cursor-pointer touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Restores all test targets to clean patched state"
               >
                 {isResettingAll ? (

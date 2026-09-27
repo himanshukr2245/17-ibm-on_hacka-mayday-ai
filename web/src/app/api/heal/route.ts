@@ -15,14 +15,14 @@ const DEMO_KEY = process.env.DEMO_KEY || '';
 const VALID_TARGETS = ['incident-a', 'incident-b', 'all', 'INC-2041', 'INC-2042'];
 const VALID_ACTIONS = ['break', 'fix', 'status', 'reset-all'];
 
-// In-memory token bucket: 20 req/min per cold-start instance (local dev only)
+// In-memory token bucket: generous threshold for smooth interactive UX (300 req/min)
 const requestBucket = { count: 0, resetAt: Date.now() + 60_000 };
 function checkRateLimit(): boolean {
   if (Date.now() > requestBucket.resetAt) {
     requestBucket.count = 0;
     requestBucket.resetAt = Date.now() + 60_000;
   }
-  return ++requestBucket.count <= 20;
+  return ++requestBucket.count <= 300;
 }
 
 function checkAuth(req: Request): boolean {

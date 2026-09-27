@@ -885,8 +885,9 @@ export default function LiveCustomStudio({
                   ].map((p) => (
                     <button
                       key={p.label}
+                      type="button"
                       onClick={() => { setCustomTrace(p.trace); if (soundEnabled) sounds.playTerminalClick(); }}
-                      className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-purple-500/50 text-[11px] font-mono text-slate-300 hover:text-white transition"
+                      className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-purple-500/50 text-[11px] font-mono text-slate-300 hover:text-white transition cursor-pointer touch-manipulation active:scale-[0.98]"
                     >
                       {p.label}
                     </button>
@@ -942,9 +943,10 @@ export default function LiveCustomStudio({
 
               {/* Action Button */}
               <button
+                type="button"
                 onClick={handleAnalyzeTrace}
                 disabled={isAnalyzing}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-xl shadow-purple-600/30 transition hover:scale-[1.01]"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-xl shadow-purple-600/30 transition hover:scale-[1.01] active:scale-[0.99] cursor-pointer touch-manipulation disabled:opacity-50"
               >
                 <Sparkles className={`w-4 h-4 text-amber-300 ${isAnalyzing ? 'animate-spin' : ''}`} />
                 <span>{isAnalyzing ? 'Ascending Scientific Proof Ladder…' : '⚡ Run MAYDAY Forensic Analysis'}</span>

@@ -157,6 +157,9 @@ export async function callHealAPI(
   }
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (DEMO_KEY) headers['x-demo-key'] = DEMO_KEY;
 
@@ -164,7 +167,9 @@ export async function callHealAPI(
       method: 'POST',
       headers,
       body: JSON.stringify({ action, target }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       return getSimulatedHealResult(action, target);
@@ -195,9 +200,14 @@ export async function callRunTestsAPI(): Promise<{
   }
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
     const headers: Record<string, string> = {};
     if (DEMO_KEY) headers['x-demo-key'] = DEMO_KEY;
-    const res = await fetch('/api/run-tests', { method: 'POST', headers });
+    const res = await fetch('/api/run-tests', { method: 'POST', headers, signal: controller.signal });
+    clearTimeout(timeoutId);
+
     if (!res.ok) {
       return {
         success: true,

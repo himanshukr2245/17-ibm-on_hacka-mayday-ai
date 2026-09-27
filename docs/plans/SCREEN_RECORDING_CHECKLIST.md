@@ -55,10 +55,10 @@ Use this checklist before and during screen recording to capture clean, high-def
 
 ### Part 4: The Matrix Tab (`02:25 – 03:00`)
 - [ ] Land on `/matrix`.
-- [ ] Scroll down to the comparison table.
-- [ ] Show the 4 invariant criteria checkmarks (Syntax, Burst Load, Zero Financial Loss, Reproduction Test).
-- [ ] Pause over the red rejected band-aid (`gatewayRaw.fee?.amount ?? 0`) explaining the $12,400 in silent losses.
-- [ ] Highlight the green **CROWNED** Crown Fix passing all 4 gates.
+- [ ] Click the second candidate card: **`RECON-2: Lazy Null Check (Band-Aid)`**.
+- [ ] Hear the procedural failure buzzer. Point cursor to the red **FAILED** on Repro Test 1 (`$10.00 charged ($0 fee uncollected)`) and highlight the **$12,400 / day** financial risk badge.
+- [ ] Click the first candidate card: **`RECON-1: Contract Schema Adapter`**.
+- [ ] Hear the green victory chime. Point cursor to all 4 green **PASSED** assertion rows (`$10.29 charged`) and highlight the glowing green **VERDICT: CROWNED CHAMPION FIX** banner.
 - [ ] Move cursor to the top navigation bar and click the **"Bobalytics"** tab at the 02:58 mark.
 
 ### Part 5: Bobalytics & Postmortems Tabs (`03:00 – 03:30`)

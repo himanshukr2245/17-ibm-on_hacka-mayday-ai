@@ -17,6 +17,7 @@ import {
   Wrench, 
   Home,
   Clock,
+  Presentation,
 } from 'lucide-react';
 import { sounds } from '../../lib/audio';
 import { callHealAPI, DEMO_MODE } from '../../lib/demoMode';
@@ -93,6 +94,7 @@ export default function Navbar() {
     { href: '/matrix', label: 'Matrix', icon: Layers },
     { href: '/bobalytics', label: 'Bobalytics', icon: Coins },
     { href: '/postmortem', label: 'Postmortems', icon: FileText },
+    { href: '/presentation', label: 'Slides', icon: Presentation },
   ];
 
   const healthConfig = systemHealth === 'HEALTHY'

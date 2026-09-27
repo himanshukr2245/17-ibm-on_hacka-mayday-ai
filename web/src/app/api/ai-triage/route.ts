@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-static';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_API_KEY = process.env.GROQ_API_KEY || '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';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 
 const CANDIDATE_MODELS = [
   'qwen/qwen3.8-27b',
