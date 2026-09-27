@@ -84,12 +84,10 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Overview', icon: Home },
-    { href: '/studio', label: 'Live Studio', icon: Wrench },
     { href: '/war-room', label: 'War Room', icon: Flame },
-    { href: '/incidents', label: 'Incidents', icon: Radio },
-    { href: '/matrix', label: 'Matrix', icon: Layers },
+    { href: '/studio', label: 'Studio & Chaos Lab', icon: Wrench },
+    { href: '/matrix', label: 'Benchmark Matrix', icon: Layers },
     { href: '/bobalytics', label: 'Bobalytics', icon: Coins },
-    { href: '/simulator', label: 'Simulator', icon: FlaskConical },
     { href: '/postmortem', label: 'Postmortems', icon: FileText },
   ];
 

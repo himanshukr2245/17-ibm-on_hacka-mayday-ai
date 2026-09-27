@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Terminal as TerminalIcon,
   Play,
@@ -23,9 +24,58 @@ import {
   Zap,
   ArrowRight,
   ExternalLink,
+  FlaskConical,
+  Flame,
+  Radio,
 } from 'lucide-react';
 import { callHealAPI, callRunTestsAPI } from '../../lib/demoMode';
 import { sounds } from '../../lib/audio';
+
+export interface ChaosScenario {
+  id: string;
+  name: string;
+  severity: 'SEV-1' | 'SEV-2';
+  icon: string;
+  description: string;
+  blastRadius: string;
+  targetService: string;
+  targetParam: 'incident-a' | 'incident-b';
+  filePath: string;
+  injectedFailure: string;
+  expectedResolution: string;
+  warRoomParam: 'A' | 'B';
+}
+
+export const CHAOS_SCENARIOS: ChaosScenario[] = [
+  {
+    id: 'drift-attack',
+    name: 'PayLink SDK v3.0 Contract Drift',
+    severity: 'SEV-1',
+    icon: '💣',
+    description: 'Silently mutates third-party SDK gateway adapter from legacy fee.amount to v3 data.feeCents.',
+    blastRadius: '100% of live EU and US checkout attempts throw unhandled TypeError exceptions.',
+    targetService: 'payment-service',
+    targetParam: 'incident-a',
+    filePath: 'targets/shopfront/src/payment/adapter.ts:31',
+    injectedFailure: "TypeError: Cannot read properties of undefined (reading 'amount')",
+    expectedResolution: 'RECON-1 detects contract drift, maps feeCents / 100, preserves 2.9% fee invariant.',
+    warRoomParam: 'A',
+  },
+  {
+    id: 'race-attack',
+    name: '50-Thread Flash Sale Concurrency Burst',
+    severity: 'SEV-1',
+    icon: '⚡',
+    description: 'Removes the per-SKU promise queue mutex, causing 20 concurrent reservation requests to oversell 10 items.',
+    blastRadius: 'Warehouse inventory collapses into negative numbers (-10), causing $24,000 in oversold merch.',
+    targetService: 'inventory-service',
+    targetParam: 'incident-b',
+    filePath: 'targets/shopfront/src/inventory/service.ts:32',
+    injectedFailure: 'AssertionError: expected 20 successful to be 10 (Inventory dipped below 0)',
+    expectedResolution: 'RECON-3 models check-then-act async delay, applies per-SKU promise queue mutex, passes all 20 threads.',
+    warRoomParam: 'B',
+  },
+];
 
 interface LiveCustomStudioProps {
   soundEnabled: boolean;
@@ -34,14 +84,23 @@ interface LiveCustomStudioProps {
     incidentB?: { status: string; file: string; isFixed: boolean };
   };
   onDiskStatusChange: () => Promise<void>;
+  initialTab?: 'chaos' | 'sandbox' | 'custom-trace' | 'webhook';
 }
 
 export default function LiveCustomStudio({
   soundEnabled,
   diskStatus,
   onDiskStatusChange,
+  initialTab = 'chaos',
 }: LiveCustomStudioProps) {
-  const [activeTab, setActiveTab] = useState<'sandbox' | 'custom-trace' | 'webhook'>('sandbox');
+  const [activeTab, setActiveTab] = useState<'chaos' | 'sandbox' | 'custom-trace' | 'webhook'>(initialTab);
+
+  // Synchronize initialTab changes (e.g. from URL search params)
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Terminal Runner State
   const [isRunningTests, setIsRunningTests] = useState(false);
@@ -53,6 +112,14 @@ export default function LiveCustomStudio({
   const [runtimeMode, setRuntimeMode] = useState<string>('LOCAL_NODE_HOST');
   const [copiedTerminal, setCopiedTerminal] = useState(false);
   const [copiedCurl, setCopiedCurl] = useState(false);
+
+  // Chaos Injection State
+  const [selectedScenario, setSelectedScenario] = useState<ChaosScenario>(CHAOS_SCENARIOS[0]);
+  const [isInjectingChaos, setIsInjectingChaos] = useState(false);
+  const [isHealingChaos, setIsHealingChaos] = useState(false);
+  const [chaosLogs, setChaosLogs] = useState<string[]>([
+    '[SYSTEM READY] Select an attack scenario above and click "Inject Outage on Disk" to simulate a real SEV-1 failure.'
+  ]);
 
   // Custom Stack Trace Ingestion State
   const [customLanguage, setCustomLanguage] = useState('TypeScript / Node.js');
@@ -138,13 +205,91 @@ export default function LiveCustomStudio({
     }
   };
 
+  // Chaos Injection Handler (from simulator)
+  const handleChaosInject = async () => {
+    setIsInjectingChaos(true);
+    if (soundEnabled) sounds.playKlaxon();
+
+    const timestamp = new Date().toISOString().substring(11, 19);
+    setChaosLogs((prev) => [
+      `[${timestamp}] ⚡ INITIATING CHAOS INJECTION: ${selectedScenario.name}...`,
+      `[${timestamp}] Target path: ${selectedScenario.filePath}`,
+      `[${timestamp}] Physically mutating file on host disk in targets/shopfront...`,
+    ]);
+
+    try {
+      const data = await callHealAPI('break', selectedScenario.targetParam);
+      setTerminalOutput(data.output ?? '');
+      setTerminalPassed(data.testsPassed ?? false);
+      if (data.mode) setRuntimeMode(data.mode);
+
+      if (soundEnabled) sounds.playTestFailure();
+
+      setChaosLogs((prev) => [
+        ...prev,
+        `[${timestamp}] 🚨 FAILURE CONFIRMED: ${selectedScenario.injectedFailure}`,
+        `[${timestamp}] Vitest suite executed live: Test passed = ${data.testsPassed ? 'YES' : 'NO (CRASH OBSERVED)'}`,
+        `[${timestamp}] Blast Radius active: ${selectedScenario.blastRadius}`,
+        `[${timestamp}] Ready for autonomous self-heal or investigation in War Room.`
+      ]);
+
+      await onDiskStatusChange();
+    } catch (err: any) {
+      setChaosLogs((prev) => [...prev, `[ERROR] Chaos injection failed: ${err.message}`]);
+      setTerminalPassed(false);
+    } finally {
+      setIsInjectingChaos(false);
+    }
+  };
+
+  // Chaos Self-Heal Handler
+  const handleChaosHeal = async () => {
+    setIsHealingChaos(true);
+    if (soundEnabled) sounds.playTerminalClick();
+
+    const timestamp = new Date().toISOString().substring(11, 19);
+    setChaosLogs((prev) => [
+      ...prev,
+      `[${timestamp}] 🩹 Initiating autonomous self-heal via IBM Bob 2.0 Crown Fix...`,
+      `[${timestamp}] Rewriting ${selectedScenario.filePath} with AST invariant patch...`
+    ]);
+
+    try {
+      const data = await callHealAPI('fix', selectedScenario.targetParam);
+      setTerminalOutput(data.output ?? '');
+      setTerminalPassed(data.testsPassed ?? true);
+      if (data.mode) setRuntimeMode(data.mode);
+
+      if (data.testsPassed) {
+        if (soundEnabled) sounds.playGreenChime();
+        setChaosLogs((prev) => [
+          ...prev,
+          `[${timestamp}] ✅ TARGET PATCHED & ALL TESTS PASSED! (${selectedScenario.targetService})`,
+          `[${timestamp}] Regression suite green: ${selectedScenario.expectedResolution}`
+        ]);
+      } else {
+        if (soundEnabled) sounds.playTestFailure();
+        setChaosLogs((prev) => [
+          ...prev,
+          `[${timestamp}] ❌ Tests failed after patch: ${(data.output ?? '').slice(0, 100)}`
+        ]);
+      }
+
+      await onDiskStatusChange();
+    } catch (err: any) {
+      setChaosLogs((prev) => [...prev, `[ERROR] Self-heal failed: ${err.message}`]);
+      setTerminalPassed(false);
+    } finally {
+      setIsHealingChaos(false);
+    }
+  };
+
   // Custom Trace Analyzer
   const handleAnalyzeTrace = () => {
     setIsAnalyzing(true);
     if (soundEnabled) sounds.playTerminalClick();
 
     setTimeout(() => {
-      // Heuristic parsing of custom trace
       const hasTypeError = customTrace.includes('TypeError');
       const hasTimeout = customTrace.includes('Timeout') || customTrace.includes('ECONN');
       const hasRace = customTrace.includes('AssertionError') || customTrace.includes('stock');
@@ -259,15 +404,27 @@ export default function LiveCustomStudio({
             <span className="text-xs font-mono text-slate-400">Physical Host Filesystem &amp; Vitest</span>
           </div>
           <h2 className="text-xl font-black text-white flex items-center gap-2 font-mono">
-            ⚡ LIVE DIAGNOSTIC &amp; HEALING WORKBENCH
+            ⚡ LIVE DIAGNOSTIC STUDIO &amp; CHAOS LAB
           </h2>
           <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-            Not a canned movie. Here you can directly inject real bugs onto disk in <code className="text-blue-300">targets/shopfront</code>, execute live Vitest test suites, paste custom stack traces, or simulate production webhooks.
+            Consolidated developer workbench: Inject chaos attacks onto disk in <code className="text-blue-300">targets/shopfront</code>, execute live Vitest test suites, paste custom stack traces, or simulate production webhooks.
           </p>
         </div>
 
         {/* Sub-Tab Selector */}
-        <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 gap-1">
+        <div className="flex flex-wrap items-center bg-slate-900 border border-slate-800 rounded-xl p-1 gap-1">
+          <button
+            onClick={() => { setActiveTab('chaos'); if (soundEnabled) sounds.playTerminalClick(); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition ${
+              activeTab === 'chaos'
+                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <FlaskConical className="w-3.5 h-3.5" />
+            <span>Chaos Injection Lab</span>
+          </button>
+
           <button
             onClick={() => { setActiveTab('sandbox'); if (soundEnabled) sounds.playTerminalClick(); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition ${
@@ -277,31 +434,31 @@ export default function LiveCustomStudio({
             }`}
           >
             <HardDrive className="w-3.5 h-3.5" />
-            <span>Target Sandbox</span>
+            <span>Host Sandbox</span>
           </button>
 
           <button
             onClick={() => { setActiveTab('custom-trace'); if (soundEnabled) sounds.playTerminalClick(); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition ${
               activeTab === 'custom-trace'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Code2 className="w-3.5 h-3.5" />
-            <span>Custom Stack Trace</span>
+            <span>Custom Trace</span>
           </button>
 
           <button
             onClick={() => { setActiveTab('webhook'); if (soundEnabled) sounds.playTerminalClick(); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition ${
               activeTab === 'webhook'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Webhook Simulator</span>
+            <span>Webhook Gateway</span>
           </button>
         </div>
       </div>
@@ -310,7 +467,145 @@ export default function LiveCustomStudio({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Active Tool (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* TAB 1: Target Microservice Sandbox */}
+          {/* TAB 1: Chaos Injection Lab (Merged from /simulator) */}
+          {activeTab === 'chaos' && (
+            <div className="bg-[#0b0f19] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
+                    <FlaskConical className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm font-mono flex items-center gap-2">
+                      Chaos Monkey Fault Injection Sandbox
+                    </h3>
+                    <p className="text-[11px] text-slate-400 font-mono">
+                      Physical disk sabotage &bull; Live Vitest regression proof &bull; Instant autonomous heal
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  href={`/war-room?incident=${selectedScenario.warRoomParam}`}
+                  className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-300 text-xs font-mono font-bold flex items-center gap-1.5 transition"
+                >
+                  <Flame className="w-3.5 h-3.5 text-red-400" />
+                  <span>War Room View</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+
+              {/* Scenario Selection Grid */}
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase font-mono text-slate-400">Choose Chaos Scenario:</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {CHAOS_SCENARIOS.map((sc) => {
+                    const isSelected = selectedScenario.id === sc.id;
+                    return (
+                      <button
+                        key={sc.id}
+                        onClick={() => { setSelectedScenario(sc); if (soundEnabled) sounds.playTerminalClick(); }}
+                        className={`text-left p-3.5 rounded-xl border transition flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-rose-950/20 border-rose-500/60 shadow-lg shadow-rose-950/30 ring-1 ring-rose-400/30'
+                            : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-base">{sc.icon}</span>
+                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                              {sc.severity}
+                            </span>
+                          </div>
+                          <div className="font-bold text-xs text-white leading-tight font-mono">
+                            {sc.name}
+                          </div>
+                          <div className="text-[11px] text-slate-400 line-clamp-2">
+                            {sc.description}
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-2 border-t border-slate-800/60 text-[10px] font-mono text-blue-400">
+                          {sc.targetService}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Selected Scenario Threat Details */}
+              <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800/90 space-y-3 font-mono">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="text-slate-400">Target File on Disk:</span>
+                  <span className="text-blue-300 bg-blue-950/30 px-2 py-0.5 rounded border border-blue-800/40">
+                    {selectedScenario.filePath}
+                  </span>
+                </div>
+                <div className="text-xs space-y-1">
+                  <span className="text-slate-400 block">Failure Signature:</span>
+                  <div className="p-2.5 rounded-lg bg-red-950/20 border border-red-900/40 text-red-300 text-[11px] leading-relaxed">
+                    {selectedScenario.injectedFailure}
+                  </div>
+                </div>
+                <div className="text-xs space-y-1">
+                  <span className="text-slate-400 block">Blast Radius:</span>
+                  <div className="text-amber-300 text-[11px] leading-relaxed">
+                    {selectedScenario.blastRadius}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons for Chaos */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                <button
+                  onClick={handleChaosInject}
+                  disabled={isInjectingChaos || isHealingChaos}
+                  className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-xl shadow-red-600/30 transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                >
+                  <Bug className={`w-4 h-4 ${isInjectingChaos ? 'animate-bounce' : ''}`} />
+                  <span>{isInjectingChaos ? 'Injecting Outage onto Disk…' : '💥 Inject Chaos Outage (Sabotage Disk)'}</span>
+                </button>
+
+                <button
+                  onClick={handleChaosHeal}
+                  disabled={isInjectingChaos || isHealingChaos}
+                  className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/30 transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                >
+                  <CheckCircle2 className={`w-4 h-4 ${isHealingChaos ? 'animate-spin' : ''}`} />
+                  <span>{isHealingChaos ? 'Synthesizing Verified Fix…' : '⚡ Trigger Autonomous Self-Heal'}</span>
+                </button>
+              </div>
+
+              {/* Chaos Telemetry Log Feed */}
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase font-mono text-slate-400 flex items-center justify-between">
+                  <span>Chaos Telemetry Log:</span>
+                  <span className="text-emerald-400 font-bold">LIVE STREAM</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-black/70 border border-slate-800 text-[11px] font-mono space-y-1.5 max-h-36 overflow-y-auto">
+                  {chaosLogs.map((log, idx) => (
+                    <div
+                      key={idx}
+                      className={
+                        log.includes('🚨') || log.includes('ERROR')
+                          ? 'text-red-400'
+                          : log.includes('✅')
+                          ? 'text-emerald-300'
+                          : log.includes('⚡')
+                          ? 'text-amber-300'
+                          : 'text-slate-400'
+                      }
+                    >
+                      {log}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: Target Microservice Sandbox */}
           {activeTab === 'sandbox' && (
             <div className="bg-[#0b0f19] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -437,12 +732,12 @@ export default function LiveCustomStudio({
             </div>
           )}
 
-          {/* TAB 2: Custom Stack Trace Ingestion */}
+          {/* TAB 3: Custom Stack Trace Ingestion */}
           {activeTab === 'custom-trace' && (
             <div className="bg-[#0b0f19] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5">
               <div className="border-b border-slate-800 pb-4">
                 <h3 className="font-bold text-white text-sm font-mono flex items-center gap-2">
-                  <Code2 className="w-4 h-4 text-blue-400" />
+                  <Code2 className="w-4 h-4 text-purple-400" />
                   Paste ANY Real Stack Trace or Production Error Log
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
@@ -471,7 +766,7 @@ export default function LiveCustomStudio({
                     <button
                       key={p.label}
                       onClick={() => { setCustomTrace(p.trace); if (soundEnabled) sounds.playTerminalClick(); }}
-                      className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-blue-500/50 text-[11px] font-mono text-slate-300 hover:text-white transition"
+                      className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-purple-500/50 text-[11px] font-mono text-slate-300 hover:text-white transition"
                     >
                       {p.label}
                     </button>
@@ -488,7 +783,7 @@ export default function LiveCustomStudio({
                   <select
                     value={customLanguage}
                     onChange={(e) => setCustomLanguage(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-purple-500"
                   >
                     <option>TypeScript / Node.js</option>
                     <option>Python / FastAPI</option>
@@ -505,7 +800,7 @@ export default function LiveCustomStudio({
                     type="text"
                     value={customService}
                     onChange={(e) => setCustomService(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-purple-500"
                     placeholder="e.g. checkout-service"
                   />
                 </div>
@@ -520,7 +815,7 @@ export default function LiveCustomStudio({
                   rows={5}
                   value={customTrace}
                   onChange={(e) => setCustomTrace(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-red-300/90 focus:outline-none focus:border-blue-500 selection:bg-red-500/30"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-red-300/90 focus:outline-none focus:border-purple-500 selection:bg-red-500/30"
                   placeholder="Paste stack trace..."
                 />
               </div>
@@ -541,7 +836,7 @@ export default function LiveCustomStudio({
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <span className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
                       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      Locus Identified: <span className="text-blue-300">{analysisResult.file}:{analysisResult.line}</span>
+                      Locus Identified: <span className="text-purple-300">{analysisResult.file}:{analysisResult.line}</span>
                     </span>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold">
                       {analysisResult.errorType}
@@ -597,12 +892,12 @@ export default function LiveCustomStudio({
             </div>
           )}
 
-          {/* TAB 3: Webhook & API Gateway */}
+          {/* TAB 4: Webhook & API Gateway */}
           {activeTab === 'webhook' && (
             <div className="bg-[#0b0f19] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
               <div className="border-b border-slate-800 pb-4">
                 <h3 className="font-bold text-white text-sm font-mono flex items-center gap-2">
-                  <Send className="w-4 h-4 text-blue-400" />
+                  <Send className="w-4 h-4 text-emerald-400" />
                   Live Webhook Gateway &amp; Integration Protocol
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
@@ -627,7 +922,7 @@ export default function LiveCustomStudio({
                   <span className="text-[10px] uppercase font-mono text-slate-400">Test via Curl Terminal:</span>
                   <button
                     onClick={copyCurlCmd}
-                    className="text-xs font-mono text-blue-400 hover:text-blue-300 flex items-center gap-1 transition"
+                    className="text-xs font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition"
                   >
                     {copiedCurl ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedCurl ? 'Copied Curl!' : 'Copy Command'}</span>
@@ -645,7 +940,7 @@ export default function LiveCustomStudio({
                 <button
                   onClick={handleTriggerWebhook}
                   disabled={isSendingWebhook}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-xl shadow-red-600/30 transition hover:scale-[1.01]"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/30 transition hover:scale-[1.01]"
                 >
                   <Send className={`w-4 h-4 ${isSendingWebhook ? 'animate-ping' : ''}`} />
                   <span>{isSendingWebhook ? 'Ingesting Webhook Payload…' : '🚀 Simulate Inbound Sentry/Instana Webhook Alert'}</span>
@@ -692,7 +987,7 @@ export default function LiveCustomStudio({
                 )}
                 <span
                   className={`w-2.5 h-2.5 rounded-full ${
-                    isRunningTests || isHealing
+                    isRunningTests || isHealing || isInjectingChaos || isHealingChaos
                       ? 'bg-amber-400 animate-ping'
                       : terminalPassed === true
                       ? 'bg-emerald-400'
@@ -719,7 +1014,7 @@ export default function LiveCustomStudio({
                   <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                   <div className="text-xs font-mono">Executing `npx vitest run` in targets/shopfront…</div>
                 </div>
-              ) : isHealing ? (
+              ) : isHealing || isInjectingChaos || isHealingChaos ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-3">
                   <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                   <div className="text-xs font-mono">Writing code mutations directly to disk…</div>
@@ -751,7 +1046,7 @@ export default function LiveCustomStudio({
                   <TerminalIcon className="w-8 h-8 opacity-40" />
                   <p className="text-xs">No command executed yet.</p>
                   <p className="text-[10px] text-slate-500">
-                    Click <strong>Run Live Vitest Suite</strong> or <strong>Inject Broken SDK</strong> to see real execution output.
+                    Click <strong>Inject Chaos Outage</strong> or <strong>Run Live Vitest Suite</strong> to see real execution output.
                   </p>
                 </div>
               )}
@@ -764,9 +1059,8 @@ export default function LiveCustomStudio({
                 <span>How to verify technical honesty:</span>
               </div>
               <p className="text-[10px] leading-relaxed text-slate-400">
-                1. Click <strong>Inject Broken SDK on Disk</strong>.<br />
-                2. Click <strong>Run Live Vitest Suite</strong> &rarr; Observe the red TypeError failure.<br />
-                3. Click <strong>Apply Autonomous Fix</strong> &rarr; Observe code restored &amp; tests turn green!
+                1. Click <strong>Inject Chaos Outage</strong> &rarr; Target file on disk is modified &amp; tests fail with red trace.<br />
+                2. Click <strong>Trigger Autonomous Self-Heal</strong> &rarr; IBM Bob AST patch applied &amp; Vitest turns green!
               </p>
             </div>
           </div>

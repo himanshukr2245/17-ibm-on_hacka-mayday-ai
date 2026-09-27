@@ -1147,18 +1147,18 @@ export async function processPayment(req: ChargeRequest) {
                   <Wrench className="w-5 h-5" />
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
-                  LIVE WORKBENCH
+                  DEVELOPER WORKBENCH
                 </span>
               </div>
               <h4 className="text-base font-bold text-white font-mono group-hover:text-emerald-300 transition">
-                Live Diagnostic Studio
+                Diagnostic Studio &amp; Chaos Lab
               </h4>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Directly inject bugs on disk in <code className="text-blue-300">targets/shopfront</code>, execute real Vitest runs in Node.js, and paste custom stack traces.
               </p>
             </div>
             <div className="mt-5 flex items-center gap-1.5 text-xs font-mono text-emerald-400 font-bold">
-              <span>Open Studio</span>
+              <span>Open Studio &amp; Lab</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition" />
             </div>
           </Link>
@@ -1175,7 +1175,7 @@ export async function processPayment(req: ChargeRequest) {
                   <Flame className="w-5 h-5" />
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold border border-red-500/30">
-                  4 SCENARIOS
+                  4 FLEET SCENARIOS
                 </span>
               </div>
               <h4 className="text-base font-bold text-white font-mono group-hover:text-red-300 transition">
@@ -1247,29 +1247,29 @@ export async function processPayment(req: ChargeRequest) {
             </div>
           </Link>
 
-          {/* Card 5: Simulator */}
+          {/* Card 5: Chaos Injection Lab (tab=chaos) */}
           <Link
-            href="/simulator"
+            href="/studio?tab=chaos"
             prefetch={false}
-            className="p-6 rounded-2xl bg-[#0b0f19] border border-slate-800 hover:border-purple-500/60 hover:bg-[#0e1422] transition-all duration-300 flex flex-col justify-between group shadow-xl hover:scale-[1.02]"
+            className="p-6 rounded-2xl bg-[#0b0f19] border border-slate-800 hover:border-rose-500/60 hover:bg-[#0e1422] transition-all duration-300 flex flex-col justify-between group shadow-xl hover:scale-[1.02]"
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400">
+                <span className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
                   <FlaskConical className="w-5 h-5" />
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-bold border border-purple-500/30">
-                  CHAOS ENGINE
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold border border-rose-500/30">
+                  CHAOS INJECTION
                 </span>
               </div>
-              <h4 className="text-base font-bold text-white font-mono group-hover:text-purple-300 transition">
-                Chaos Engineering Simulator
+              <h4 className="text-base font-bold text-white font-mono group-hover:text-rose-300 transition">
+                Chaos Monkey Fault Lab
               </h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Inject synthetic network latency, database connection exhaustion, and EventEmitter memory leaks on demand.
+                Sabotage contract adapters, simulate flash sale concurrency bursts, and watch MAYDAY self-heal on disk.
               </p>
             </div>
-            <div className="mt-5 flex items-center gap-1.5 text-xs font-mono text-purple-400 font-bold">
+            <div className="mt-5 flex items-center gap-1.5 text-xs font-mono text-rose-400 font-bold">
               <span>Launch Chaos Lab</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition" />
             </div>
