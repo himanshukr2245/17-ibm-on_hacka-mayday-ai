@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 
+// Required for Next.js output: 'export' static build compatibility
 export const dynamic = 'force-static';
 
 const ADAPTER_PATH = path.resolve(process.cwd(), '../targets/shopfront/src/payment/adapter.ts');
@@ -10,6 +11,19 @@ const INVENTORY_PATH = path.resolve(process.cwd(), '../targets/shopfront/src/inv
 const SHOPFRONT_DIR = path.resolve(process.cwd(), '../targets/shopfront');
 
 const DEMO_KEY = process.env.DEMO_KEY || '';
+
+const VALID_TARGETS = ['incident-a', 'incident-b', 'all', 'INC-2041', 'INC-2042'];
+const VALID_ACTIONS = ['break', 'fix', 'status', 'reset-all'];
+
+// In-memory token bucket: 20 req/min per cold-start instance (local dev only)
+const requestBucket = { count: 0, resetAt: Date.now() + 60_000 };
+function checkRateLimit(): boolean {
+  if (Date.now() > requestBucket.resetAt) {
+    requestBucket.count = 0;
+    requestBucket.resetAt = Date.now() + 60_000;
+  }
+  return ++requestBucket.count <= 20;
+}
 
 function checkAuth(req: Request): boolean {
   if (!DEMO_KEY) return true; // local dev: open when key not set
@@ -61,8 +75,9 @@ export async function GET(req: Request) {
   try {
     const status = checkStatus();
     return NextResponse.json({ success: true, ...status });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
 
@@ -70,8 +85,16 @@ export async function POST(req: Request) {
   if (!checkAuth(req)) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
+  if (!checkRateLimit()) {
+    return NextResponse.json({ success: false, error: 'Rate limit exceeded' }, { status: 429 });
+  }
   try {
     const { action, target = 'incident-a' } = await req.json(); // action: 'break' | 'fix' | 'status' | 'reset-all', target: 'incident-a' | 'incident-b' | 'all'
+
+    // Whitelist validation
+    if (!VALID_ACTIONS.includes(action) || !VALID_TARGETS.includes(target)) {
+      return NextResponse.json({ success: false, error: 'Invalid action or target' }, { status: 400 });
+    }
 
     // Cloudflare Edge / Serverless Fallback
     if (!fs.existsSync || !fs.existsSync(SHOPFRONT_DIR)) {
@@ -244,7 +267,8 @@ export async function POST(req: Request) {
         );
       });
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

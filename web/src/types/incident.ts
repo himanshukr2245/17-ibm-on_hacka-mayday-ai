@@ -20,7 +20,7 @@ export interface Hypothesis {
 export interface IncidentEvent {
   t: number; // millisecond offset
   type: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
 }
 
 export interface MatrixRow {

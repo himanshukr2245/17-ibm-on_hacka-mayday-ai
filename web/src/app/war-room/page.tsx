@@ -1,10 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  ShieldAlert,
   Terminal,
-  Cpu,
   CheckCircle2,
   XCircle,
   Play,
@@ -19,30 +17,26 @@ import {
   Layers,
   GitCommit,
   AlertTriangle,
-  ArrowRight,
   Sparkles,
   ExternalLink,
   Copy,
   Printer,
   Check,
   GitBranch,
-  Radio,
   DollarSign,
   Activity,
   Compass,
-  Volume2,
-  VolumeX,
   ShieldCheck,
-  Eye,
   Code2,
   HardDrive,
   TrendingDown,
-  CheckCheck,
+  Share2,
 } from 'lucide-react';
+import AudioToggle from '../../components/common/AudioToggle';
 import { sounds } from '../../lib/audio';
 import { callHealAPI, callRunTestsAPI, DEMO_MODE } from '../../lib/demoMode';
 import { useTypewriter } from '../../lib/typewriter';
-import { saveIncidentToLocal } from '../../db/local';
+import { saveIncidentToLocal, getAllLocalIncidents } from '../../db/local';
 
 function TypewriterText({ text }: { text: string }) {
   const displayed = useTypewriter(text, 14);
@@ -723,6 +717,8 @@ export default function MaydayWarRoom() {
   const [selectedIncident, setSelectedIncident] = useState<'A' | 'B' | 'C' | 'D'>('A');
   const [appMode, setAppMode] = useState<'DEMO' | 'REAL'>('DEMO');
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [copiedShare, setCopiedShare] = useState(false);
+  const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set());
 
   // 🚀 30-Second Autopilot Tour state
   const [isAutopilot, setIsAutopilot] = useState(false);
@@ -772,45 +768,10 @@ export default function MaydayWarRoom() {
     }
   };
 
-  // Read URL params on mount: ?incident=A&autoplay=true
-  useEffect(() => {
-    const init = async () => {
-      await checkLiveDiskStatus();
-      const params = new URLSearchParams(window.location.search);
-      const incParam = params.get('incident') as 'A' | 'B' | 'C' | 'D' | null;
-      if (incParam && ['A', 'B', 'C', 'D'].includes(incParam)) {
-        switchIncident(incParam);
-      }
-      const modeParam = params.get('mode');
-      if (modeParam === 'real' || modeParam === 'REAL') {
-        setAppMode('REAL');
-      }
-      if (params.get('autopilot') === 'true' || params.get('guided') === 'true') {
-        const id = setTimeout(() => {
-          startAutopilotTour();
-        }, 600);
-        timeoutRefs.current.push(id);
-      } else if (params.get('autoplay') === 'true') {
-        const id = setTimeout(() => {
-          setSpeed(4);
-          setTimeout(() => handleLaunchTriageSquad(), 200);
-        }, 500);
-        timeoutRefs.current.push(id);
-      }
-    };
-    init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Phase color sweep: update <html data-phase> for CSS variables
-  useEffect(() => {
-    const phase = step === 0 ? 'IDLE' : step < 3 ? 'RACING' : 'VERIFIED';
-    document.documentElement.dataset.phase = phase;
-  }, [step]);
-
-  // Switch incident — clear all stale timeouts first
-  const switchIncident = (inc: 'A' | 'B' | 'C' | 'D') => {
-    clearAllTimeouts();
+  // ─── P0 FIX: switchIncident declared as useCallback BEFORE the useEffect that calls it ───
+  const switchIncident = useCallback((inc: 'A' | 'B' | 'C' | 'D') => {
+    timeoutRefs.current.forEach(clearTimeout);
+    timeoutRefs.current = [];
     setSelectedIncident(inc);
     setIsPlaying(false);
     setIsAutopilot(false);
@@ -826,8 +787,7 @@ export default function MaydayWarRoom() {
     );
     setLiveTestOutput(null);
     setLiveTestPassed(null);
-    checkLiveDiskStatus();
-  };
+  }, []);
 
   const resetInvestigation = () => {
     clearAllTimeouts();
@@ -863,8 +823,9 @@ export default function MaydayWarRoom() {
         if (soundEnabled) sounds.playTestFailure();
       }
       checkLiveDiskStatus();
-    } catch (err: any) {
-      setLiveTestOutput('Failed to execute test API: ' + err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setLiveTestOutput('Failed to execute test API: ' + msg);
       setLiveTestPassed(false);
       if (soundEnabled) sounds.playTestFailure();
     } finally {
@@ -895,8 +856,9 @@ export default function MaydayWarRoom() {
         if (soundEnabled) sounds.playTestFailure();
         setStep(1);
       }
-    } catch (err: any) {
-      setLiveTestOutput('Failed to mutate code: ' + err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setLiveTestOutput('Failed to mutate code: ' + msg);
     } finally {
       setIsHealing(false);
     }
@@ -923,9 +885,13 @@ export default function MaydayWarRoom() {
       clearAllTimeouts();
       setIsPlaying(false);
     }
-    // Switch to Incident A for canonical contract drift story
+    // Switch to Incident A for canonical contract drift story — P0 BUG FIX: also reset detectives
     if (selectedIncident !== 'A') {
       setSelectedIncident('A');
+      setDetectives(INCIDENT_DATA['A'].detectives);
+      setSelectedCommit(
+        INCIDENT_DATA['A'].commits.find((c) => c.type === 'CULPRIT') || INCIDENT_DATA['A'].commits[0]
+      );
     }
     setSpeed(4);
     setIsAutopilot(true);
@@ -967,7 +933,7 @@ export default function MaydayWarRoom() {
       setMttrFrozen(5600);
       setShowCrownBanner(true);
       setAutopilotMsg('👑 4/4: Physical SSD healed! Vitest passes on your machine. Outage resolved in 38 seconds!');
-      
+
       setConfetti(
         Array.from({ length: 24 }, (_, i) => ({
           id: Date.now() + i,
@@ -979,28 +945,30 @@ export default function MaydayWarRoom() {
       setTimeout(() => setConfetti([]), 2500);
       if (soundEnabled) sounds.playGreenChime();
 
+      const incA = INCIDENT_DATA['A'];
       saveIncidentToLocal({
-        id: currentIncident.id,
-        severity: currentIncident.severity as any,
-        title: currentIncident.title,
-        target: currentIncident.target,
-        alertSnippet: currentIncident.alertSnippet,
-        winner: currentIncident.winner,
-        detectives: detectives,
-        matrix: currentIncident.matrix,
-        diff: currentIncident.diff,
-        tests: currentIncident.tests,
-        postmortem: currentIncident.postmortem,
-      }).catch(() => {});
+        id: incA.id,
+        severity: incA.severity as 'SEV-1' | 'SEV-2' | 'SEV-3',
+        title: incA.title,
+        target: incA.target,
+        alertSnippet: incA.alertSnippet,
+        winner: incA.winner,
+        detectives: INCIDENT_DATA['A'].detectives,
+        matrix: incA.matrix,
+        diff: incA.diff,
+        tests: incA.tests,
+        postmortem: incA.postmortem,
+      }).then(() => setResolvedIds((prev) => new Set([...prev, incA.id]))).catch(() => {});
     }, 5500);
 
     timeoutRefs.current.push(t1, t2, t3);
   };
 
-  // Real end-to-end Triage Squad Launch
-  const handleLaunchTriageSquad = async () => {
+  // ─── P0 FIX: handleLaunchTriageSquad declared as useCallback BEFORE the useEffect that calls it ───
+  const handleLaunchTriageSquad = useCallback(async () => {
     if (isPlaying) {
-      clearAllTimeouts();
+      timeoutRefs.current.forEach(clearTimeout);
+      timeoutRefs.current = [];
       setIsPlaying(false);
       return;
     }
@@ -1105,7 +1073,7 @@ export default function MaydayWarRoom() {
 
       saveIncidentToLocal({
         id: currentIncident.id,
-        severity: currentIncident.severity as any,
+        severity: currentIncident.severity as 'SEV-1' | 'SEV-2' | 'SEV-3',
         title: currentIncident.title,
         target: currentIncident.target,
         alertSnippet: currentIncident.alertSnippet,
@@ -1115,9 +1083,84 @@ export default function MaydayWarRoom() {
         diff: currentIncident.diff,
         tests: currentIncident.tests,
         postmortem: currentIncident.postmortem,
-      }).catch(() => {});
+      }).then(() => setResolvedIds((prev) => new Set([...prev, currentIncident.id]))).catch(() => {});
     }, 5600 / speed);
     timeoutRefs.current.push(t1, t2, t3);
+  }, [isPlaying, step, speed, soundEnabled, currentIncident, selectedIncident, diskStatus, detectives]);
+
+  // ─── Read URL params on mount — NOW SAFE: switchIncident & handleLaunchTriageSquad already declared ───
+  useEffect(() => {
+    const init = async () => {
+      await checkLiveDiskStatus();
+
+      // Restore previously-resolved incidents from IndexedDB
+      try {
+        const past = await getAllLocalIncidents();
+        setResolvedIds(new Set(past.map((i) => i.id)));
+      } catch {
+        // non-critical
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const incParam = params.get('incident') as 'A' | 'B' | 'C' | 'D' | null;
+      if (incParam && ['A', 'B', 'C', 'D'].includes(incParam)) {
+        switchIncident(incParam);
+      }
+      const modeParam = params.get('mode');
+      if (modeParam === 'real' || modeParam === 'REAL') {
+        setAppMode('REAL');
+      }
+      if (params.get('autopilot') === 'true' || params.get('guided') === 'true') {
+        const id = setTimeout(() => { startAutopilotTour(); }, 600);
+        timeoutRefs.current.push(id);
+      } else if (params.get('autoplay') === 'true') {
+        const id = setTimeout(() => {
+          setSpeed(4);
+          setTimeout(() => handleLaunchTriageSquad(), 200);
+        }, 500);
+        timeoutRefs.current.push(id);
+      }
+    };
+    init();
+  }, [switchIncident, handleLaunchTriageSquad]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Phase color sweep: update <html data-phase> for CSS variables
+  useEffect(() => {
+    const phase = step === 0 ? 'IDLE' : step < 3 ? 'RACING' : 'VERIFIED';
+    document.documentElement.dataset.phase = phase;
+  }, [step]);
+
+  // ─── Keyboard shortcuts for eyes-free demo control ───
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          handleLaunchTriageSquad();
+          break;
+        case '1': switchIncident('A'); break;
+        case '2': switchIncident('B'); break;
+        case '3': switchIncident('C'); break;
+        case '4': switchIncident('D'); break;
+        case 'r':
+        case 'R': resetInvestigation(); break;
+        case 't':
+        case 'T': startAutopilotTour(); break;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleLaunchTriageSquad, switchIncident]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Share Demo URL handler ───
+  const handleShareDemo = () => {
+    const base = window.location.origin;
+    const url = `${base}/war-room?incident=${selectedIncident}&autopilot=true`;
+    navigator.clipboard.writeText(url).catch(() => {});
+    setCopiedShare(true);
+    sounds.playGreenChime();
+    setTimeout(() => setCopiedShare(false), 2000);
   };
 
   // Timer loop & revenue bleed ticker
@@ -1134,33 +1177,36 @@ export default function MaydayWarRoom() {
 
   // Update detective state based on step
   useEffect(() => {
-    if (step >= 1 && currentIncident.timeline[0]) {
-      setDetectives((prev) => {
-        const next = [...prev];
-        for (const update of currentIncident.timeline[0].updates) {
-          next[update.index] = { ...next[update.index], ...update } as Hypothesis;
-        }
-        return next;
-      });
-    }
-    if (step >= 2 && currentIncident.timeline[1]) {
-      setDetectives((prev) => {
-        const next = [...prev];
-        for (const update of currentIncident.timeline[1].updates) {
-          next[update.index] = { ...next[update.index], ...update } as Hypothesis;
-        }
-        return next;
-      });
-    }
-    if (step >= 3 && currentIncident.timeline[2]) {
-      setDetectives((prev) => {
-        const next = [...prev];
-        for (const update of currentIncident.timeline[2].updates) {
-          next[update.index] = { ...next[update.index], ...update } as Hypothesis;
-        }
-        return next;
-      });
-    }
+    const timer = setTimeout(() => {
+      if (step >= 1 && currentIncident.timeline[0]) {
+        setDetectives((prev) => {
+          const next = [...prev];
+          for (const update of currentIncident.timeline[0].updates) {
+            next[update.index] = { ...next[update.index], ...update } as Hypothesis;
+          }
+          return next;
+        });
+      }
+      if (step >= 2 && currentIncident.timeline[1]) {
+        setDetectives((prev) => {
+          const next = [...prev];
+          for (const update of currentIncident.timeline[1].updates) {
+            next[update.index] = { ...next[update.index], ...update } as Hypothesis;
+          }
+          return next;
+        });
+      }
+      if (step >= 3 && currentIncident.timeline[2]) {
+        setDetectives((prev) => {
+          const next = [...prev];
+          for (const update of currentIncident.timeline[2].updates) {
+            next[update.index] = { ...next[update.index], ...update } as Hypothesis;
+          }
+          return next;
+        });
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [step, currentIncident]);
 
   const formatTimer = (ms: number) => {
@@ -1336,17 +1382,32 @@ ${currentIncident.postmortem.rejectionReason}
           </div>
         </div>
 
+        {/* Triage Progress Bar */}
+        <div className="max-w-7xl mx-auto mt-5 px-0">
+          <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 transition-all duration-700 ease-out"
+              style={{ width: `${(step / 3) * 100}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1 px-0.5">
+            {(['Ingesting Alert', 'Detectives Racing', 'Falsifying Decoys', 'Crown Fix Verified'] as const).map((label, i) => (
+              <span key={i} className={step >= i ? 'text-emerald-400 font-bold' : ''}>{label}</span>
+            ))}
+          </div>
+        </div>
+
         {/* Global Action Bar: Autopilot Tour + Controls */}
-        <div className="max-w-7xl mx-auto mt-6 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto mt-4 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 flex-wrap">
-            {/* 🚀 60-Second Guided Autopilot Tour Button */}
+            {/* 🚀 Autopilot Tour Button */}
             <button
               onClick={startAutopilotTour}
               className="px-4 py-2.5 rounded-xl font-bold text-xs font-mono flex items-center gap-2 transition shadow-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 shadow-purple-600/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-              title="Runs an automated 60-second guided tour showing the entire self-healing workflow"
+              title="Runs an automated guided tour showing the entire self-healing workflow (T)"
             >
               <Sparkles className="w-4 h-4 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
-              <span>⚡ 60-Second Guided Auto-Pilot Tour</span>
+              <span>⚡ Autopilot Tour</span>
             </button>
 
             {/* Launch Triage Squad Playback */}
@@ -1357,6 +1418,7 @@ ${currentIncident.postmortem.rejectionReason}
                   ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30'
                   : 'bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-500 hover:to-rose-500 shadow-red-600/30'
               }`}
+              title="Launch or pause the triage simulation (Space)"
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
               <span>{isPlaying ? 'Pause Triage' : step === 0 ? 'Launch Triage Squad' : 'Re-Run Triage'}</span>
@@ -1366,17 +1428,17 @@ ${currentIncident.postmortem.rejectionReason}
             <button
               onClick={resetInvestigation}
               className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              title="Reset Simulation"
+              title="Reset Simulation (R)"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
 
             {/* Speed Selector */}
             <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-0.5 text-xs font-mono">
-              {[1, 2, 4].map((s) => (
+              {([1, 2, 4] as const).map((s) => (
                 <button
                   key={s}
-                  onClick={() => setSpeed(s as any)}
+                  onClick={() => setSpeed(s)}
                   className={`px-2.5 py-1.5 rounded-lg transition ${
                     speed === s ? 'bg-slate-700 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
                   }`}
@@ -1385,27 +1447,45 @@ ${currentIncident.postmortem.rejectionReason}
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Right: Sound Toggle & Status */}
-          <div className="flex items-center gap-4">
+            {/* Share Demo URL */}
             <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-slate-400 hover:text-white flex items-center gap-2 transition"
-              title="Toggle Web Audio SFX"
+              onClick={handleShareDemo}
+              className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 font-mono text-xs flex items-center gap-1.5 transition"
+              title="Copy shareable demo URL to clipboard"
             >
-              {soundEnabled ? (
+              {copiedShare ? (
                 <>
-                  <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="hidden sm:inline">Audio SFX On</span>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline text-emerald-400">Copied!</span>
                 </>
               ) : (
                 <>
-                  <VolumeX className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="hidden sm:inline">Muted</span>
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Share Demo</span>
                 </>
               )}
             </button>
+          </div>
+
+          {/* Right: appMode chip + Sound Toggle + Phase status */}
+          <div className="flex items-center gap-3">
+            {/* Live / Demo mode indicator */}
+            {appMode === 'REAL' ? (
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 font-mono text-[10px] font-bold flex items-center gap-1.5">
+                <HardDrive className="w-3 h-3" /> REAL DISK MODE
+              </span>
+            ) : (
+              <span className="hidden sm:flex px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-400/30 text-blue-300 font-mono text-[10px] font-bold items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" /> DEMO MODE
+              </span>
+            )}
+
+            <AudioToggle
+              soundEnabled={soundEnabled}
+              onToggle={() => setSoundEnabled(!soundEnabled)}
+              size="sm"
+            />
 
             <div className="text-right hidden sm:block">
               <div className="text-[10px] uppercase font-mono text-slate-400">Current Phase</div>
@@ -1594,6 +1674,13 @@ ${currentIncident.postmortem.rejectionReason}
                 {isSelected && (
                   <span className="absolute -top-2.5 right-4 bg-blue-500 text-white font-mono text-[9px] font-black px-2.5 py-0.5 rounded-full shadow-md uppercase">
                     ACTIVE SCENARIO
+                  </span>
+                )}
+                {/* Previously-resolved badge from IndexedDB */}
+                {!isSelected && resolvedIds.has(inc.id) && (
+                  <span className="absolute -top-2 left-3 bg-emerald-600 text-white font-mono text-[9px] font-black px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
+                    RESOLVED
                   </span>
                 )}
 
@@ -1860,7 +1947,7 @@ ${currentIncident.postmortem.rejectionReason}
 
                 {/* Theory Statement */}
                 <div className="bg-slate-900/80 rounded-xl p-3 border border-slate-800 text-xs text-slate-300 font-medium mb-4 leading-relaxed">
-                  "{d.theory}"
+                  {`"${d.theory}"`}
                 </div>
 
                 {/* Proof Ladder */}
@@ -1973,7 +2060,7 @@ ${currentIncident.postmortem.rejectionReason}
                   <span className="text-[10px] bg-red-500/20 px-2 py-0.5 rounded">Hides the Crash</span>
                 </div>
                 <div className="bg-black rounded-lg p-3 font-mono text-xs text-red-300 border border-red-900/50 leading-relaxed">
-                  <span className="text-slate-500">// Naive fix: silences TypeError</span>
+                  <span className="text-slate-500">{`// Naive fix: silences TypeError`}</span>
                   <br />
                   <span className="text-red-400">const fee = (gatewayRaw as any).fee?.amount ?? 0;</span>
                   <br />
@@ -1997,7 +2084,7 @@ ${currentIncident.postmortem.rejectionReason}
                   <span className="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded">Preserves Invariant</span>
                 </div>
                 <div className="bg-black rounded-lg p-3 font-mono text-xs text-emerald-300 border border-emerald-900/50 leading-relaxed">
-                  <span className="text-slate-500">// Maps PayLink SDK v3.0 feeCents (/100)</span>
+                  <span className="text-slate-500">{`// Maps PayLink SDK v3.0 feeCents (/100)`}</span>
                   <br />
                   <span className="text-emerald-400">const fee = gatewayRaw.data.feeCents / 100;</span>
                   <br />
@@ -2295,7 +2382,7 @@ ${currentIncident.postmortem.rejectionReason}
                 <div>
                   <h3 className="font-bold text-white text-sm">Deterministic Cross-Examination Matrix</h3>
                   <p className="text-xs text-slate-400">
-                    Candidate patches tested against every detective's reproduction test. Band-aids are immediately exposed.
+                    {`Candidate patches tested against every detective's reproduction test. Band-aids are immediately exposed.`}
                   </p>
                 </div>
                 <span className="text-xs font-mono px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">
@@ -2374,7 +2461,7 @@ ${currentIncident.postmortem.rejectionReason}
                 <span className="text-emerald-400">Self-Healing Attempt: 1/3 (Green on First Try)</span>
               </div>
               <div className="bg-[#07090e] rounded-xl p-4 border border-slate-800/80 space-y-1 overflow-x-auto">
-                <div className="text-slate-500">// {currentIncident.title}</div>
+                <div className="text-slate-500">{`// `}{currentIncident.title}</div>
                 <div className="text-slate-400"> {currentIncident.diff.context}</div>
                 <div className="bg-red-500/20 text-red-400 px-2 py-1 rounded -mx-2 whitespace-pre-wrap">
                   {currentIncident.diff.removed}

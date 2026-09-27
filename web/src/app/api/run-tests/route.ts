@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
+// Required for Next.js output: 'export' static build compatibility
 export const dynamic = 'force-static';
 
 const DEMO_KEY = process.env.DEMO_KEY || '';

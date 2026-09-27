@@ -1,16 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Layers, 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
-  Zap, 
-  ShieldAlert, 
-  RotateCcw,
-  Sparkles,
-  DollarSign,
+import {
+  Layers,
+  CheckCircle2,
+  XCircle,
   TrendingDown
 } from 'lucide-react';
 import { sounds } from '../../lib/audio';
@@ -135,7 +129,7 @@ export default function MatrixPage() {
             </h1>
           </div>
           <p className="text-xs text-slate-400">
-            N×N Automated Assertion Laboratory. Every proposed patch is cross-examined against every detective's reproduction tests to expose band-aids.
+            {`N×N Automated Assertion Laboratory. Every proposed patch is cross-examined against every detective's reproduction tests to expose band-aids.`}
           </p>
         </div>
 
@@ -330,14 +324,14 @@ export default function MatrixPage() {
       <div className="bg-gradient-to-r from-red-950/30 via-slate-900/60 to-slate-900/40 border border-red-500/30 rounded-2xl p-6 shadow-xl">
         <div className="flex items-center gap-2 mb-3 text-red-400 font-mono font-bold text-sm">
           <TrendingDown className="w-4 h-4" />
-          <span>The "AI Band-Aid Trap": Why LLMs Without Invariants Break Businesses</span>
+          <span>{`The "AI Band-Aid Trap": Why LLMs Without Invariants Break Businesses`}</span>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed mb-4">
-          When asked to fix <code className="text-red-300">TypeError: Cannot read properties of undefined (reading 'amount')</code>, 95% of LLMs apply an optional chaining band-aid: <code className="text-amber-300">res.fee?.amount ?? 0</code>.
-          While this stops the server from crashing (200 OK), it silently stops charging processing fees. Over a 24-hour flash sale with 40,000 transactions, this band-aid quietly loses <strong>$12,400+ in uncollected fees</strong> without a single error log being triggered.
+          {`When asked to fix `}<code className="text-red-300">{`TypeError: Cannot read properties of undefined (reading 'amount')`}</code>{`, 95% of LLMs apply an optional chaining band-aid: `}<code className="text-amber-300">res.fee?.amount ?? 0</code>.
+          {` While this stops the server from crashing (200 OK), it silently stops charging processing fees. Over a 24-hour flash sale with 40,000 transactions, this band-aid quietly loses `}<strong>$12,400+ in uncollected fees</strong>{` without a single error log being triggered.`}
         </p>
         <p className="text-xs text-slate-400 font-mono">
-          MAYDAY's Cross-Examination Matrix solves this forever by enforcing that reproduction tests must assert <strong>business outcomes</strong>, not just "doesn't throw".
+          {`MAYDAY's Cross-Examination Matrix solves this forever by enforcing that reproduction tests must assert `}<strong>business outcomes</strong>{`, not just "doesn't throw".`}
         </p>
       </div>
     </main>

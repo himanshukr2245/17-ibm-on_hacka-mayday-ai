@@ -89,7 +89,10 @@ export default function LiveCustomStudio({
   // Synchronize initialTab changes (e.g. from URL search params)
   useEffect(() => {
     if (initialTab) {
-      setActiveTab(initialTab);
+      const timer = setTimeout(() => {
+        setActiveTab(initialTab);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [initialTab]);
 
@@ -131,7 +134,7 @@ export default function LiveCustomStudio({
 
   // Webhook Simulator State
   const [isSendingWebhook, setIsSendingWebhook] = useState(false);
-  const [webhookResponse, setWebhookResponse] = useState<any | null>(null);
+  const [webhookResponse, setWebhookResponse] = useState<Record<string, unknown> | null>(null);
 
   // Trigger real disk mutation
   const handleMutateDisk = async (action: 'break' | 'fix', target: 'incident-a' | 'incident-b') => {
@@ -148,8 +151,9 @@ export default function LiveCustomStudio({
         if (soundEnabled) sounds.playTestFailure();
       }
       await onDiskStatusChange();
-    } catch (err: any) {
-      setTerminalOutput('Failed to execute disk mutation: ' + err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setTerminalOutput('Failed to execute disk mutation: ' + msg);
       setTerminalPassed(false);
     } finally {
       setIsHealing(false);
@@ -172,8 +176,9 @@ export default function LiveCustomStudio({
         if (soundEnabled) sounds.playTestFailure();
       }
       await onDiskStatusChange();
-    } catch (err: any) {
-      setTerminalOutput('Vitest execution error: ' + err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setTerminalOutput('Vitest execution error: ' + msg);
       setTerminalPassed(false);
     } finally {
       setIsRunningTests(false);
@@ -189,8 +194,9 @@ export default function LiveCustomStudio({
       setTerminalOutput(data.message || 'All targets restored to healthy passing baseline.');
       setTerminalPassed(true);
       await onDiskStatusChange();
-    } catch (err: any) {
-      setTerminalOutput('Reset error: ' + err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setTerminalOutput('Reset error: ' + msg);
     } finally {
       setIsResetting(false);
     }
@@ -202,7 +208,7 @@ export default function LiveCustomStudio({
     if (soundEnabled) sounds.playKlaxon();
 
     const timestamp = new Date().toISOString().substring(11, 19);
-    setChaosLogs((prev) => [
+    setChaosLogs([
       `[${timestamp}] ⚡ INITIATING CHAOS INJECTION: ${selectedScenario.name}...`,
       `[${timestamp}] Target path: ${selectedScenario.filePath}`,
       `[${timestamp}] Physically mutating file on host disk in targets/shopfront...`,
@@ -225,8 +231,9 @@ export default function LiveCustomStudio({
       ]);
 
       await onDiskStatusChange();
-    } catch (err: any) {
-      setChaosLogs((prev) => [...prev, `[ERROR] Chaos injection failed: ${err.message}`]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setChaosLogs((prev) => [...prev, `[ERROR] Chaos injection failed: ${msg}`]);
       setTerminalPassed(false);
     } finally {
       setIsInjectingChaos(false);
@@ -267,8 +274,9 @@ export default function LiveCustomStudio({
       }
 
       await onDiskStatusChange();
-    } catch (err: any) {
-      setChaosLogs((prev) => [...prev, `[ERROR] Self-heal failed: ${err.message}`]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setChaosLogs((prev) => [...prev, `[ERROR] Self-heal failed: ${msg}`]);
       setTerminalPassed(false);
     } finally {
       setIsHealingChaos(false);
@@ -357,8 +365,9 @@ export default function LiveCustomStudio({
       setTerminalPassed(false);
       await onDiskStatusChange();
       if (soundEnabled) sounds.playRadarPing();
-    } catch (e: any) {
-      setWebhookResponse({ status: 500, error: e.message });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setWebhookResponse({ status: 500, error: msg });
     } finally {
       setIsSendingWebhook(false);
     }

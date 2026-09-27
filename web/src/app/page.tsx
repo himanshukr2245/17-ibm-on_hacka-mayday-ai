@@ -27,15 +27,12 @@ import {
   Users,
   Briefcase,
   UserCheck,
-  Code2,
-  ChevronRight,
   Sparkles,
-  ExternalLink,
 } from 'lucide-react';
 import { sounds } from '../lib/audio';
 
 export default function LandingCommandPortal() {
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled] = useState(true);
 
   // Smriti-Inspired Dual Mode: Golden Demo (In-Memory) vs Real Host Mode (targets/shopfront on disk)
   const [activeMode, setActiveMode] = useState<'DEMO' | 'REAL'>('DEMO');
@@ -556,7 +553,7 @@ export default function LandingCommandPortal() {
                 key={tab.id}
                 type="button"
                 onClick={() => {
-                  setUsageTab(tab.id as any);
+                  setUsageTab(tab.id as 'webhook' | 'studio' | 'cli');
                   if (soundEnabled) sounds.playTerminalClick();
                 }}
                 className={`px-4 py-2.5 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition cursor-pointer ${
@@ -807,7 +804,7 @@ bob run --mode mayday-triage "Checkout failing with TypeError in payment-service
                   key={s.stage}
                   type="button"
                   onClick={() => {
-                    setArchStage(s.stage as any);
+                    setArchStage(s.stage as 1 | 2 | 3 | 4 | 5);
                     if (soundEnabled) sounds.playTerminalClick();
                   }}
                   className={`p-3.5 rounded-xl border text-left transition-all duration-300 cursor-pointer ${

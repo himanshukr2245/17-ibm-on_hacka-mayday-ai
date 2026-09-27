@@ -1,0 +1,1033 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MAYDAY — Implementation Plan</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px; line-height: 1.65;
+  background: #ffffff; color: #1f2328;
+  padding: 36px 24px;
+}
+.wrap { max-width: 760px; margin: 0 auto; }
+
+/* ── Header ── */
+.hero { margin-bottom: 32px; }
+.hero h1 { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4px; }
+.hero .sub { color: #57606a; font-size: 13px; margin-bottom: 20px; }
+.hero .tagline {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  color: #e2e8f0; border-radius: 12px; padding: 16px 20px;
+  font-size: 13px; line-height: 1.7; border: 1px solid #334155;
+}
+.hero .tagline strong { color: #a5f3fc; }
+
+/* ── Summary Stats ── */
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 28px; }
+.stat { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 10px; text-align: center; background: #f7f8fa; }
+.stat .n { font-size: 26px; font-weight: 900; line-height: 1; }
+.stat .l { font-size: 10px; color: #57606a; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+.c-red { color: #dc2626; } .c-amb { color: #d97706; } .c-grn { color: #16a34a; }
+.c-blu { color: #2563eb; } .c-pur { color: #7c3aed; }
+
+/* ── Phase Header ── */
+.phase {
+  border-radius: 14px; overflow: hidden;
+  border: 1px solid #e5e7eb; margin-bottom: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.phase-header {
+  padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.phase-header .left { display: flex; align-items: center; gap: 12px; }
+.phase-label {
+  font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 1px; padding: 3px 8px; border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.3); opacity: 0.9;
+}
+.phase-title { font-size: 15px; font-weight: 800; }
+.phase-meta { font-size: 11px; opacity: 0.8; font-family: monospace; }
+.phase-body { padding: 18px; background: #ffffff; }
+
+/* Phase color themes */
+.ph-red    .phase-header { background: #7f1d1d; color: #fef2f2; }
+.ph-orange .phase-header { background: #7c2d12; color: #fff7ed; }
+.ph-amber  .phase-header { background: #78350f; color: #fffbeb; }
+.ph-green  .phase-header { background: #14532d; color: #f0fdf4; }
+.ph-blue   .phase-header { background: #1e3a5f; color: #eff6ff; }
+.ph-purple .phase-header { background: #3b0764; color: #faf5ff; }
+
+/* ── Task Cards ── */
+.task {
+  border: 1px solid #e5e7eb; border-radius: 10px;
+  margin-bottom: 14px; overflow: hidden;
+}
+.task-head {
+  padding: 10px 14px; display: flex; align-items: flex-start; gap: 10px;
+  background: #f7f8fa; border-bottom: 1px solid #e5e7eb;
+}
+.task-num {
+  width: 22px; height: 22px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: 11px;
+  font-weight: 800; flex-shrink: 0; margin-top: 1px;
+}
+.task-title { font-size: 13px; font-weight: 700; line-height: 1.4; }
+.task-file  { font-family: monospace; font-size: 11px; color: #57606a; margin-top: 2px; }
+.task-body  { padding: 12px 14px; }
+.task-body p { font-size: 13px; color: #374151; margin-bottom: 8px; }
+.task-body p:last-child { margin-bottom: 0; }
+
+/* Priority badges */
+.badge {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 4px; text-transform: uppercase;
+  letter-spacing: 0.4px; vertical-align: middle; margin-right: 6px; flex-shrink: 0;
+}
+.b-red    { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.b-orange { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+.b-amber  { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.b-green  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.b-blue   { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.b-purple { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+.b-gray   { background: #f7f8fa; color: #374151; border: 1px solid #e5e7eb; }
+
+/* Code blocks */
+pre {
+  background: #0f172a; color: #e2e8f0; border-radius: 8px;
+  padding: 14px 16px; font-family: "SF Mono", Consolas, monospace;
+  font-size: 11.5px; line-height: 1.6; overflow-x: auto;
+  margin: 10px 0; border: 1px solid #1e293b;
+}
+pre .c-del { color: #f87171; }
+pre .c-add { color: #4ade80; }
+pre .c-cmt { color: #94a3b8; }
+pre .c-key { color: #93c5fd; }
+pre .c-str { color: #fbbf24; }
+
+code {
+  font-family: "SF Mono", Consolas, monospace; font-size: 12px;
+  background: #f1f5f9; border: 1px solid #e2e8f0;
+  border-radius: 3px; padding: 1px 5px; color: #1e40af;
+}
+
+/* Steps list */
+ol.steps { padding-left: 0; list-style: none; counter-reset: step; }
+ol.steps li {
+  counter-increment: step; display: flex; gap: 10px;
+  margin-bottom: 8px; align-items: flex-start;
+}
+ol.steps li::before {
+  content: counter(step); min-width: 20px; height: 20px;
+  background: #1e3a5f; color: #fff; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+}
+
+ul.checks { padding-left: 0; list-style: none; }
+ul.checks li { padding-left: 20px; position: relative; margin-bottom: 5px; font-size: 13px; color: #374151; }
+ul.checks li::before { content: "▸"; position: absolute; left: 0; color: #3b82f6; font-weight: 700; }
+
+/* Impact bar */
+.impact {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+}
+.impact-chip {
+  font-size: 11px; font-weight: 600; padding: 3px 8px;
+  border-radius: 5px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #374151;
+}
+
+/* Roadmap table */
+.roadmap { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 10px 0; }
+.roadmap th { background: #0f172a; color: #e2e8f0; padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+.roadmap td { border: 1px solid #e5e7eb; padding: 8px 12px; vertical-align: top; }
+.roadmap tr:nth-child(even) td { background: #f7f8fa; }
+
+hr.div { border: none; border-top: 1px solid #e5e7eb; margin: 28px 0; }
+footer { text-align: center; color: #57606a; font-size: 12px; margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+
+<div class="hero">
+  <h1>⚡ MAYDAY — Full Fix &amp; Feature Implementation Plan</h1>
+  <p class="sub">Highly detailed engineering spec for every fix, feature, and improvement identified in the code audit</p>
+  <div class="tagline">
+    <strong>The plan is organized into 6 execution phases.</strong><br />
+    Phase 1 &amp; 2 are <strong style="color:#f87171">mission-critical</strong> — fix them before any demo or judge review.<br />
+    Phase 3 fixes the build so it compiles cleanly. Phase 4–6 are polish, features, and enhancements that make the app <em>mind-blowing</em>.
+  </div>
+</div>
+
+
+<div class="stats">
+  <div class="stat"><div class="n c-red">2</div><div class="l">Critical Bugs</div></div>
+  <div class="stat"><div class="n c-amb">6</div><div class="l">Logic Fixes</div></div>
+  <div class="stat"><div class="n c-grn">3</div><div class="l">Security</div></div>
+  <div class="stat"><div class="n c-blu">5</div><div class="l">UX Features</div></div>
+  <div class="stat"><div class="n c-pur">4</div><div class="l">Arch Upgrades</div></div>
+</div>
+
+
+
+
+<div class="phase ph-red">
+  <div class="phase-header">
+    <div class="left">
+      <span class="phase-label">Phase 1</span>
+      <span class="phase-title">🚨 Demo-Breaking Bug Fixes</span>
+    </div>
+    <span class="phase-meta">2 tasks · ~20 mins · FIX BEFORE ANY DEMO</span>
+  </div>
+  <div class="phase-body">
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#dc2626;color:#fff">1</div>
+        <div>
+          <div class="task-title"><span class="badge b-red">CRITICAL</span>Fix <code>switchIncident</code> &amp; <code>handleLaunchTriageSquad</code> used before declaration</div>
+          <div class="task-file">web/src/app/war-room/page.tsx · lines 782, 791</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p><strong>The Problem:</strong> The init <code>useEffect</code> (line ~776) calls <code>switchIncident()</code> and <code>handleLaunchTriageSquad()</code> to handle URL params like <code>?incident=B&amp;autoplay=true</code>. Both functions are declared as <code>const</code> arrow functions <em>after</em> the effect. In JavaScript, <code>const</code> is not hoisted — it causes a Temporal Dead Zone error. The deep-link URL and autoplay URL param are <strong>silently broken</strong>.</p>
+        <p><strong>Root Cause:</strong> Function declarations were put in logical reading order (effects first, then handlers), but the effect references handlers that aren't yet initialized.</p>
+        <p><strong>Fix Strategy:</strong> Convert the two functions to <code>useCallback</code> hooks and declare them <em>before</em> the <code>useEffect</code> that references them. This also satisfies React's exhaustive-deps rule.</p>
+
+        <pre><span class="c-cmt">// BEFORE (broken — const is not hoisted):</span>
+<span class="c-key">useEffect</span>(() =&gt; {
+  <span class="c-key">const</span> init = <span class="c-key">async</span> () =&gt; {
+    ...
+    switchIncident(incParam);           <span class="c-del">// ❌ TDZ — not declared yet</span>
+    handleLaunchTriageSquad();          <span class="c-del">// ❌ TDZ — not declared yet</span>
+  };
+  init();
+}, []);
+
+<span class="c-key">const</span> switchIncident = (inc) =&gt; { ... };        <span class="c-del">// line 812 — too late!</span>
+<span class="c-key">const</span> handleLaunchTriageSquad = <span class="c-key">async</span> () =&gt; { ... }; <span class="c-del">// line 996 — too late!</span>
+
+<span class="c-cmt">// AFTER (fixed — useCallback placed before the useEffect):</span>
+<span class="c-key">const</span> switchIncident = <span class="c-key">useCallback</span>((inc) =&gt; {
+  clearAllTimeouts();
+  setSelectedIncident(inc);
+  setIsPlaying(<span class="c-key">false</span>);
+  setIsAutopilot(<span class="c-key">false</span>);
+  setAutopilotMsg(<span class="c-key">null</span>);
+  setStep(<span class="c-key">0</span>);
+  setElapsedMs(<span class="c-key">0</span>);
+  setMttrFrozen(<span class="c-key">null</span>);
+  setShowCrownBanner(<span class="c-key">false</span>);
+  setBleedAmount(<span class="c-key">145.0</span>);
+  setDetectives(INCIDENT_DATA[inc].detectives);
+  setSelectedCommit(
+    INCIDENT_DATA[inc].commits.find((c) =&gt; c.type === <span class="c-str">'CULPRIT'</span>)
+    || INCIDENT_DATA[inc].commits[<span class="c-key">0</span>]
+  );
+  setLiveTestOutput(<span class="c-key">null</span>);
+  setLiveTestPassed(<span class="c-key">null</span>);
+  checkLiveDiskStatus();
+}, []);  <span class="c-cmt">// stable ref — no deps needed</span>
+
+<span class="c-cmt">// handleLaunchTriageSquad wrapped in useCallback similarly</span>
+<span class="c-key">const</span> handleLaunchTriageSquad = <span class="c-key">useCallback</span>(<span class="c-key">async</span> () =&gt; {
+  ...
+}, [isPlaying, step, currentIncident, ...]);  <span class="c-cmt">// all deps declared</span>
+
+<span class="c-cmt">// THEN the useEffect can safely reference them:</span>
+<span class="c-key">useEffect</span>(() =&gt; {
+  <span class="c-key">const</span> init = <span class="c-key">async</span> () =&gt; {
+    <span class="c-key">await</span> checkLiveDiskStatus();
+    <span class="c-key">const</span> params = <span class="c-key">new</span> URLSearchParams(window.location.search);
+    <span class="c-key">const</span> incParam = params.get(<span class="c-str">'incident'</span>);
+    <span class="c-key">if</span> (incParam &amp;&amp; [<span class="c-str">'A'</span>,<span class="c-str">'B'</span>,<span class="c-str">'C'</span>,<span class="c-str">'D'</span>].includes(incParam))
+      switchIncident(incParam);          <span class="c-add">// ✅ works — ref is stable</span>
+    <span class="c-key">if</span> (params.get(<span class="c-str">'autoplay'</span>) === <span class="c-str">'true'</span>) {
+      setTimeout(() =&gt; handleLaunchTriageSquad(), <span class="c-key">700</span>); <span class="c-add">// ✅ works</span>
+    }
+  };
+  init();
+}, [switchIncident, handleLaunchTriageSquad]);  <span class="c-cmt">// deps satisfied</span></pre>
+
+        <div class="impact">
+          <span class="impact-chip">🎯 Fixes ?incident=B deep-link</span>
+          <span class="impact-chip">🎯 Fixes ?autoplay=true</span>
+          <span class="impact-chip">🎯 Fixes ?autopilot=true URL</span>
+          <span class="impact-chip">⏱ ~15 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#dc2626;color:#fff">2</div>
+        <div>
+          <div class="task-title"><span class="badge b-red">CRITICAL</span>Fix Autopilot Tour not resetting detectives when switching from Incident D</div>
+          <div class="task-file">web/src/app/war-room/page.tsx · startAutopilotTour() · line ~920</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p><strong>The Problem:</strong> If a visitor is on Incident D (all 3 detectives are pre-FALSIFIED in their initial state), and clicks the Autopilot Tour button, the code calls <code>setSelectedIncident('A')</code> but does <strong>not</strong> reset the detective array. The tour launches but all 3 detective cards show as FALSIFIED from frame zero — looks completely broken.</p>
+        <pre><span class="c-cmt">// Inside startAutopilotTour() — add this reset:</span>
+<span class="c-key">if</span> (selectedIncident !== <span class="c-str">'A'</span>) {
+  setSelectedIncident(<span class="c-str">'A'</span>);
+  <span class="c-add">setDetectives(INCIDENT_DATA['A'].detectives);  // ✅ ADD THIS LINE</span>
+  <span class="c-add">setSelectedCommit(                             // ✅ AND THIS</span>
+    <span class="c-add">INCIDENT_DATA['A'].commits.find(c =&gt; c.type === 'CULPRIT')</span>
+    <span class="c-add">|| INCIDENT_DATA['A'].commits[0]</span>
+  <span class="c-add">);</span>
+}
+setStep(<span class="c-key">0</span>);
+setElapsedMs(<span class="c-key">0</span>);
+...</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Autopilot tour always starts clean</span>
+          <span class="impact-chip">⏱ ~3 min</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+<div class="phase ph-orange">
+  <div class="phase-header">
+    <div class="left">
+      <span class="phase-label">Phase 2</span>
+      <span class="phase-title">🔧 Build Errors &amp; Lint Errors (Compilation Blockers)</span>
+    </div>
+    <span class="phase-meta">4 tasks · ~25 mins · blocks next build</span>
+  </div>
+  <div class="phase-body">
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#ea580c;color:#fff">1</div>
+        <div>
+          <div class="task-title"><span class="badge b-orange">Build Error</span>Fix 9 unescaped HTML entities in Matrix page</div>
+          <div class="task-file">web/src/app/matrix/page.tsx · lines 138, 333, 336, 340</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>Raw <code>'</code> and <code>"</code> characters inside JSX text content. React's JSX parser and Next.js production builds treat these as hard errors. They also fail the <code>react/no-unescaped-entities</code> ESLint rule which is set to <code>error</code> level.</p>
+        <pre><span class="c-cmt">// line 138 area — fix apostrophes in JSX text:</span>
+<span class="c-del">- doesn't throw</span>
+<span class="c-add">+ doesn't throw</span>
+
+<span class="c-cmt">// line 333 area — fix quotes around "AI Band-Aid Trap":</span>
+<span class="c-del">- The "AI Band-Aid Trap": Why LLMs Without Invariants Break Businesses</span>
+<span class="c-add">+ The "AI Band-Aid Trap": Why LLMs Without Invariants Break Businesses</span>
+
+<span class="c-cmt">// line 336 — two apostrophes in one sentence:</span>
+<span class="c-del">- doesn't crash (200 OK), it silently stops</span>
+<span class="c-add">+ doesn't crash (200 OK), it silently stops</span>
+
+<span class="c-cmt">// line 340 — mixed quote/apostrophe mess:</span>
+<span class="c-del">- "doesn't throw"</span>
+<span class="c-add">+ "doesn't throw"</span>
+
+<span class="c-cmt">// Quickest approach — wrap the whole explainer paragraph</span>
+<span class="c-cmt">// in a template literal expression: {`text with 'quotes' and "quotes"`}</span></pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Unblocks production build</span>
+          <span class="impact-chip">⏱ ~5 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#ea580c;color:#fff">2</div>
+        <div>
+          <div class="task-title"><span class="badge b-orange">Logic Fix</span>Remove <code>export const dynamic = 'force-static'</code> from both API routes</div>
+          <div class="task-file">web/src/app/api/heal/route.ts:6 · web/src/app/api/run-tests/route.ts:6</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>The <code>force-static</code> directive tells Next.js to pre-render these routes at build time and serve them as static HTML — completely ignoring any runtime POST logic. The disk mutation and Vitest execution code in POST handlers simply never runs in <code>next build + next start</code> mode. The Cloudflare edge simulation fallback (<code>!fs.existsSync</code> guard) handles cloud deployment correctly already — the directive is redundant <em>and</em> harmful.</p>
+        <pre><span class="c-cmt">// web/src/app/api/heal/route.ts</span>
+<span class="c-del">- export const dynamic = 'force-static';</span>
+<span class="c-add">+ // Removed: POST handler mutates disk — cannot be statically exported</span>
+
+<span class="c-cmt">// web/src/app/api/run-tests/route.ts</span>
+<span class="c-del">- export const dynamic = 'force-static';</span>
+<span class="c-add">+ // Removed: POST handler runs child_process.exec — cannot be statically exported</span></pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Real disk mode works with next start</span>
+          <span class="impact-chip">🎯 Cloudflare fallback still works unchanged</span>
+          <span class="impact-chip">⏱ ~2 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#ea580c;color:#fff">3</div>
+        <div>
+          <div class="task-title"><span class="badge b-orange">Dead Code</span>Remove unused <code>appMode</code> state or wire it up</div>
+          <div class="task-file">web/src/app/war-room/page.tsx · line 724</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p><code>const [appMode, setAppMode] = useState&lt;'DEMO' | 'REAL'&gt;('DEMO')</code> is declared, set via URL param, and then <strong>never read anywhere in the render tree</strong>. ESLint flags it as an unused variable. Either remove it, or connect it to a visible UI indicator.</p>
+        <p><strong>Recommended approach (wire it up — makes demo stronger):</strong> Show a <code>● REAL DISK MODE</code> chip in the header when <code>appMode === 'REAL'</code>. This makes the "this is running on real hardware" claim visually obvious to judges.</p>
+        <pre><span class="c-cmt">// Option A: Remove entirely (simplest)</span>
+<span class="c-del">- const [appMode, setAppMode] = useState&lt;'DEMO' | 'REAL'&gt;('DEMO');</span>
+<span class="c-del">- if (modeParam === 'real' || modeParam === 'REAL') { setAppMode('REAL'); }</span>
+
+<span class="c-cmt">// Option B: Wire to a visible indicator chip (recommended)</span>
+<span class="c-add">// In the header area, add:</span>
+<span class="c-add">{appMode === 'REAL' &amp;&amp; (</span>
+<span class="c-add">  &lt;span className="px-2 py-1 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-mono text-[10px] font-bold flex items-center gap-1.5"&gt;</span>
+<span class="c-add">    &lt;HardDrive className="w-3 h-3" /&gt; REAL DISK MODE</span>
+<span class="c-add">  &lt;/span&gt;</span>
+<span class="c-add">)}</span></pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Clears ESLint error</span>
+          <span class="impact-chip">🎯 Option B adds powerful visual proof for judges</span>
+          <span class="impact-chip">⏱ ~5 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#ea580c;color:#fff">4</div>
+        <div>
+          <div class="task-title"><span class="badge b-amber">Cleanup</span>Remove all unused icon imports across all pages</div>
+          <div class="task-file">bobalytics · matrix · postmortem · studio · war-room page.tsx files</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>ESLint reports 20+ unused Lucide icon imports across 5 files. While these are warnings (not errors), they increase bundle size slightly and clutter the lint output. Fix in bulk by removing the dead imports.</p>
+        <ul class="checks">
+          <li><code>bobalytics/page.tsx</code>: remove <code>Cpu</code>, <code>DollarSign</code>, <code>CheckCircle2</code>, <code>Zap</code></li>
+          <li><code>matrix/page.tsx</code>: remove <code>AlertTriangle</code>, <code>Zap</code>, <code>ShieldAlert</code>, <code>RotateCcw</code>, <code>Sparkles</code>, <code>DollarSign</code></li>
+          <li><code>postmortem/page.tsx</code>: remove <code>Download</code>, <code>Layers</code>, <code>ArrowRight</code></li>
+          <li><code>studio/page.tsx</code>: remove <code>FlaskConical</code></li>
+          <li><code>war-room/page.tsx</code>: remove <code>ShieldAlert</code>, <code>Cpu</code>, <code>ArrowRight</code>, <code>Radio</code>, <code>Eye</code>, <code>CheckCheck</code></li>
+          <li><code>page.tsx</code> (landing): remove <code>Code2</code>, <code>ChevronRight</code>, <code>ExternalLink</code>, fix <code>setSoundEnabled</code></li>
+        </ul>
+        <div class="impact">
+          <span class="impact-chip">🎯 Zero lint warnings on build</span>
+          <span class="impact-chip">🎯 Slightly smaller JS bundle</span>
+          <span class="impact-chip">⏱ ~8 min</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+<div class="phase ph-amber">
+  <div class="phase-header">
+    <div class="left">
+      <span class="phase-label">Phase 3</span>
+      <span class="phase-title">🔐 Security Hardening &amp; Data Protection</span>
+    </div>
+    <span class="phase-meta">3 tasks · ~15 mins</span>
+  </div>
+  <div class="phase-body">
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#d97706;color:#fff">1</div>
+        <div>
+          <div class="task-title"><span class="badge b-amber">Security</span>Add server-side rate limiting to <code>/api/heal</code> POST</div>
+          <div class="task-file">web/src/app/api/heal/route.ts</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>Currently, if <code>DEMO_KEY</code> is not set (default local dev mode), the API accepts <em>unlimited</em> POST requests. Anyone who finds your local IP on a shared network could spam-break your target files. Add a simple in-memory token bucket to cap requests to 10 per minute.</p>
+        <pre><span class="c-cmt">// Add at the top of route.ts, before the handlers:</span>
+<span class="c-key">const</span> requestBucket = { count: <span class="c-key">0</span>, resetAt: Date.now() + <span class="c-key">60_000</span> };
+
+<span class="c-key">function</span> checkRateLimit(): <span class="c-key">boolean</span> {
+  <span class="c-key">if</span> (Date.now() &gt; requestBucket.resetAt) {
+    requestBucket.count = <span class="c-key">0</span>;
+    requestBucket.resetAt = Date.now() + <span class="c-key">60_000</span>;
+  }
+  requestBucket.count++;
+  <span class="c-key">return</span> requestBucket.count &lt;= <span class="c-key">10</span>;  <span class="c-cmt">// 10 req/min</span>
+}
+
+<span class="c-cmt">// In POST handler, after checkAuth:</span>
+<span class="c-key">if</span> (!checkRateLimit()) {
+  <span class="c-key">return</span> NextResponse.json(
+    { success: <span class="c-key">false</span>, error: <span class="c-str">'Rate limit exceeded'</span> },
+    { status: <span class="c-key">429</span> }
+  );
+}</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Prevents API abuse on local network</span>
+          <span class="impact-chip">⏱ ~10 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#d97706;color:#fff">2</div>
+        <div>
+          <div class="task-title"><span class="badge b-amber">Security</span>Add path traversal guard to file mutation in <code>/api/heal</code></div>
+          <div class="task-file">web/src/app/api/heal/route.ts · lines 144–226</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>The POST handler takes a <code>target</code> parameter from the request body. Currently <code>target</code> is only matched against string literals (<code>'incident-a'</code>, <code>'incident-b'</code>). However, if someone sends a crafted payload with a different target value, the code falls through to using <code>ADAPTER_PATH</code> / <code>INVENTORY_PATH</code> which are hardcoded — so no real vulnerability exists. But the validation should be explicit for a production-quality demo.</p>
+        <pre><span class="c-cmt">// Add explicit target whitelist validation at start of POST body:</span>
+<span class="c-key">const</span> VALID_TARGETS = [<span class="c-str">'incident-a'</span>, <span class="c-str">'incident-b'</span>, <span class="c-str">'all'</span>, <span class="c-str">'INC-2041'</span>, <span class="c-str">'INC-2042'</span>];
+<span class="c-key">const</span> VALID_ACTIONS = [<span class="c-str">'break'</span>, <span class="c-str">'fix'</span>, <span class="c-str">'status'</span>, <span class="c-str">'reset-all'</span>];
+
+<span class="c-key">if</span> (!VALID_TARGETS.includes(target) || !VALID_ACTIONS.includes(action)) {
+  <span class="c-key">return</span> NextResponse.json(
+    { success: <span class="c-key">false</span>, error: <span class="c-str">'Invalid target or action'</span> },
+    { status: <span class="c-key">400</span> }
+  );
+}</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Explicit input validation</span>
+          <span class="impact-chip">🎯 Prevents unexpected code paths</span>
+          <span class="impact-chip">⏱ ~5 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#d97706;color:#fff">3</div>
+        <div>
+          <div class="task-title"><span class="badge b-green">Info</span>Audit <code>bob_sessions/*.png</code> for personally identifiable information</div>
+          <div class="task-file">bob_sessions/ folder · Bobalytics page</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>The 4 session receipt screenshots are loaded directly in the public Bobalytics gallery and will be viewable by judges and anyone with the repo link. Before final public submission, open each PNG and check:</p>
+        <ul class="checks">
+          <li>Does it show your full IBM account email address?</li>
+          <li>Does it show your personal name or team member names?</li>
+          <li>Does it show your remaining Bobcoin balance (competitive info)?</li>
+          <li>Does it show any API endpoints or workspace paths you'd prefer private?</li>
+        </ul>
+        <p>If any of these are sensitive, crop the screenshots to show only the relevant task execution evidence before committing the final version.</p>
+        <div class="impact">
+          <span class="impact-chip">🎯 Privacy before public submission</span>
+          <span class="impact-chip">⏱ ~10 min</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+<div class="phase ph-green">
+  <div class="phase-header">
+    <div class="left">
+      <span class="phase-label">Phase 4</span>
+      <span class="phase-title">✨ High-Impact UX Features &amp; Demo Polish</span>
+    </div>
+    <span class="phase-meta">5 tasks · ~60 mins · makes judges go "wow"</span>
+  </div>
+  <div class="phase-body">
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#16a34a;color:#fff">1</div>
+        <div>
+          <div class="task-title"><span class="badge b-green">Feature</span>"Share Demo URL" one-click copy button in War Room</div>
+          <div class="task-file">web/src/app/war-room/page.tsx · action bar area</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>Add a small <strong>📋 Share</strong> button next to the speed selector that copies <code>https://mayday.pages.dev/war-room?incident=A&amp;autopilot=true</code> to the clipboard. This is the single most useful UX improvement for a hackathon — you can paste one URL into Slack/email and the judges get a fully auto-running demo.</p>
+        <pre><span class="c-key">const</span> [copiedShare, setCopiedShare] = useState(<span class="c-key">false</span>);
+
+<span class="c-key">const</span> handleShare = () =&gt; {
+  <span class="c-key">const</span> base = window.location.origin;
+  <span class="c-key">const</span> url = `${base}/war-room?incident=${selectedIncident}&amp;autopilot=true`;
+  navigator.clipboard.writeText(url);
+  setCopiedShare(<span class="c-key">true</span>);
+  sounds.playGreenChime();
+  setTimeout(() =&gt; setCopiedShare(<span class="c-key">false</span>), <span class="c-key">2000</span>);
+};
+
+<span class="c-cmt">// In JSX — add to the action bar:</span>
+&lt;button onClick={handleShare} className="..."&gt;
+  {copiedShare ? &lt;Check className="w-3.5 h-3.5 text-emerald-400" /&gt;
+               : &lt;Share2 className="w-3.5 h-3.5" /&gt;}
+  &lt;span&gt;{copiedShare ? 'Link Copied!' : 'Share Demo'}&lt;/span&gt;
+&lt;/button&gt;</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 One-click shareable demo URL for judges</span>
+          <span class="impact-chip">🎯 URL encodes current incident + autoplay</span>
+          <span class="impact-chip">⏱ ~15 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#16a34a;color:#fff">2</div>
+        <div>
+          <div class="task-title"><span class="badge b-green">Feature</span>Keyboard shortcut system for live demo control</div>
+          <div class="task-file">web/src/app/war-room/page.tsx · add useEffect keydown listener</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>Add a global <code>keydown</code> listener so you can drive the entire demo without touching the mouse. Critical for when you're presenting live.</p>
+        <pre><span class="c-key">useEffect</span>(() =&gt; {
+  <span class="c-key">const</span> onKey = (e: KeyboardEvent) =&gt; {
+    <span class="c-cmt">// Don't fire when typing in inputs</span>
+    <span class="c-key">if</span> (e.target instanceof HTMLInputElement) <span class="c-key">return</span>;
+    
+    <span class="c-key">switch</span> (e.key) {
+      <span class="c-key">case</span> <span class="c-str">' '</span>:  <span class="c-cmt">// Space — launch/pause triage</span>
+        e.preventDefault();
+        handleLaunchTriageSquad();
+        <span class="c-key">break</span>;
+      <span class="c-key">case</span> <span class="c-str">'1'</span>: switchIncident(<span class="c-str">'A'</span>); <span class="c-key">break</span>;
+      <span class="c-key">case</span> <span class="c-str">'2'</span>: switchIncident(<span class="c-str">'B'</span>); <span class="c-key">break</span>;
+      <span class="c-key">case</span> <span class="c-str">'3'</span>: switchIncident(<span class="c-str">'C'</span>); <span class="c-key">break</span>;
+      <span class="c-key">case</span> <span class="c-str">'4'</span>: switchIncident(<span class="c-str">'D'</span>); <span class="c-key">break</span>;
+      <span class="c-key">case</span> <span class="c-str">'r'</span>:
+      <span class="c-key">case</span> <span class="c-str">'R'</span>: resetInvestigation(); <span class="c-key">break</span>;
+      <span class="c-key">case</span> <span class="c-str">'t'</span>:
+      <span class="c-key">case</span> <span class="c-str">'T'</span>: startAutopilotTour(); <span class="c-key">break</span>;
+    }
+  };
+  window.addEventListener(<span class="c-str">'keydown'</span>, onKey);
+  <span class="c-key">return</span> () =&gt; window.removeEventListener(<span class="c-str">'keydown'</span>, onKey);
+}, [handleLaunchTriageSquad, switchIncident, resetInvestigation, startAutopilotTour]);</pre>
+        <p>Also add a small keyboard cheatsheet tooltip (hidden by default, shown on hover of a <code>⌨</code> icon near the controls):</p>
+        <pre><span class="c-cmt">// Keyboard legend tooltip:</span>
+<span class="c-str">Space</span>: Launch/Pause | <span class="c-str">T</span>: Autopilot Tour | <span class="c-str">R</span>: Reset
+<span class="c-str">1</span>/<span class="c-str">2</span>/<span class="c-str">3</span>/<span class="c-str">4</span>: Switch Incident A/B/C/D</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Eyes-free demo control</span>
+          <span class="impact-chip">🎯 Looks extremely professional</span>
+          <span class="impact-chip">⏱ ~20 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#16a34a;color:#fff">3</div>
+        <div>
+          <div class="task-title"><span class="badge b-green">Feature</span>Add ESC key to close Bobalytics lightbox</div>
+          <div class="task-file">web/src/app/bobalytics/page.tsx · lightbox modal</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>The evidence receipt modal only closes via backdrop click or the X button. Add an <code>Escape</code> keydown listener when the modal is open.</p>
+        <pre><span class="c-cmt">// Add inside BobalyticsPage component:</span>
+<span class="c-key">useEffect</span>(() =&gt; {
+  <span class="c-key">if</span> (!activeReceipt) <span class="c-key">return</span>;
+  <span class="c-key">const</span> onEsc = (e: KeyboardEvent) =&gt; {
+    <span class="c-key">if</span> (e.key === <span class="c-str">'Escape'</span>) setActiveReceipt(<span class="c-key">null</span>);
+  };
+  window.addEventListener(<span class="c-str">'keydown'</span>, onEsc);
+  <span class="c-key">return</span> () =&gt; window.removeEventListener(<span class="c-str">'keydown'</span>, onEsc);
+}, [activeReceipt]);</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Standard modal UX</span>
+          <span class="impact-chip">⏱ ~5 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#16a34a;color:#fff">4</div>
+        <div>
+          <div class="task-title"><span class="badge b-green">Feature</span>Fix Postmortem incident switcher overflow on mobile</div>
+          <div class="task-file">web/src/app/postmortem/page.tsx · incident switcher tabs</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>The 4 tab buttons (<code>INC-2041</code> through <code>INC-2044</code>) sit in a fixed flex row. On screens narrower than ~400px, they overflow outside the viewport and become unreachable.</p>
+        <pre><span class="c-cmt">// Change the switcher container from rigid flex to responsive flex-wrap:</span>
+<span class="c-del">- className="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-slate-800 w-fit"</span>
+<span class="c-add">+ className="flex flex-wrap items-center gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-slate-800"</span>
+
+<span class="c-cmt">// And shorten the button labels on mobile with a truncation:</span>
+<span class="c-del">- {p.id}: {p.title.split(':')[1]?.trim() || p.title}</span>
+<span class="c-add">+ &lt;span className="hidden sm:inline"&gt;{p.id}: {p.title.split(':')[1]?.trim()}&lt;/span&gt;</span>
+<span class="c-add">+ &lt;span className="sm:hidden"&gt;{p.id}&lt;/span&gt;</span></pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Mobile-usable postmortem page</span>
+          <span class="impact-chip">⏱ ~5 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#16a34a;color:#fff">5</div>
+        <div>
+          <div class="task-title"><span class="badge b-green">Feature</span>Show previously-resolved incidents on War Room mount (use IndexedDB read)</div>
+          <div class="task-file">web/src/app/war-room/page.tsx · web/src/db/local.ts</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>The <code>saveIncidentToLocal()</code> write already runs on every resolution. But nothing ever <em>reads</em> it back — the IndexedDB feature is completely invisible to users. Show a small "Previously Resolved" badge on incident tabs that have been resolved in this browser session.</p>
+        <pre><span class="c-cmt">// Add to war-room page state:</span>
+<span class="c-key">const</span> [resolvedIds, setResolvedIds] = useState&lt;Set&lt;<span class="c-key">string</span>&gt;&gt;(<span class="c-key">new</span> Set());
+
+<span class="c-cmt">// In the init useEffect, after checkLiveDiskStatus():</span>
+<span class="c-key">import</span> { getAllLocalIncidents } <span class="c-key">from</span> <span class="c-str">'../../db/local'</span>;
+
+<span class="c-key">const</span> past = <span class="c-key">await</span> getAllLocalIncidents();
+setResolvedIds(<span class="c-key">new</span> Set(past.map(i =&gt; i.id)));
+
+<span class="c-cmt">// In the incident switcher tabs — add a checkmark badge:</span>
+{resolvedIds.has(INCIDENT_DATA[inc].id) &amp;&amp; (
+  &lt;span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Resolved this session" /&gt;
+)}</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Makes IndexedDB feature visible and meaningful</span>
+          <span class="impact-chip">🎯 Shows persistence across page refreshes</span>
+          <span class="impact-chip">⏱ ~15 min</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+<div class="phase ph-blue">
+  <div class="phase-header">
+    <div class="left">
+      <span class="phase-label">Phase 5</span>
+      <span class="phase-title">🏗️ Architecture Upgrades (Code Quality)</span>
+    </div>
+    <span class="phase-meta">4 tasks · ~90 mins · makes code maintainable</span>
+  </div>
+  <div class="phase-body">
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#2563eb;color:#fff">1</div>
+        <div>
+          <div class="task-title"><span class="badge b-blue">Arch</span>Extract shared <code>AudioController</code> component — eliminate 3 duplicate sound toggle buttons</div>
+          <div class="task-file">web/src/components/common/ (new file)</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>The sound toggle button exists as three separate inline implementations: in <code>Navbar.tsx</code>, <code>war-room/page.tsx</code>, and <code>studio/page.tsx</code>. Any change (icon, style, tooltip) must be made in 3 places. Extract it once.</p>
+        <pre><span class="c-cmt">// new file: web/src/components/common/AudioToggle.tsx</span>
+<span class="c-str">'use client'</span>;
+<span class="c-key">import</span> { Volume2, VolumeX } <span class="c-key">from</span> <span class="c-str">'lucide-react'</span>;
+<span class="c-key">import</span> { sounds } <span class="c-key">from</span> <span class="c-str">'../../lib/audio'</span>;
+
+<span class="c-key">export default function</span> AudioToggle({
+  muted, onToggle, size = <span class="c-str">'md'</span>
+}: { muted: boolean; onToggle: () =&gt; void; size?: <span class="c-str">'sm'</span> | <span class="c-str">'md'</span> }) {
+  <span class="c-key">return</span> (
+    &lt;button onClick={onToggle} title={muted ? <span class="c-str">'Unmute SFX'</span> : <span class="c-str">'Mute SFX'</span>}
+      className={`p-2 rounded-lg border transition-all ${
+        muted ? <span class="c-str">'bg-slate-900 border-slate-800 text-slate-500'</span>
+              : <span class="c-str">'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'</span>
+      }`}
+    &gt;
+      {muted ? &lt;VolumeX className="w-4 h-4" /&gt;
+             : &lt;Volume2 className="w-4 h-4" /&gt;}
+    &lt;/button&gt;
+  );
+}</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 DRY — one component, three usages</span>
+          <span class="impact-chip">⏱ ~20 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#2563eb;color:#fff">2</div>
+        <div>
+          <div class="task-title"><span class="badge b-blue">Arch</span>Add <code>lib/telemetry.ts</code> — centralize MTTR math &amp; financial calculation formulas</div>
+          <div class="task-file">web/src/lib/telemetry.ts (new file)</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>Financial bleed rates, MTTR calculations, and ROI math are scattered as magic numbers across 3 files. Extract to a single testable utility.</p>
+        <pre><span class="c-cmt">// web/src/lib/telemetry.ts</span>
+<span class="c-key">export const</span> BLEED_RATE_PER_TICK = <span class="c-key">1.45</span>;  <span class="c-cmt">// $1.45 per 100ms tick</span>
+<span class="c-key">export const</span> BLEED_START_AMOUNT = <span class="c-key">145.0</span>; <span class="c-cmt">// Initial outage damage already done</span>
+<span class="c-key">export const</span> HUMAN_COST_PER_INCIDENT = <span class="c-key">900</span>;  <span class="c-cmt">// 3 SREs × 2.5hr × $120/hr</span>
+<span class="c-key">export const</span> BOB_COST_PER_INCIDENT = <span class="c-key">0.38</span>; <span class="c-cmt">// ~0.38 Bobcoins</span>
+
+<span class="c-key">export function</span> formatTimer(ms: <span class="c-key">number</span>): <span class="c-key">string</span> {
+  <span class="c-key">const</span> totalSecs = Math.floor(ms / <span class="c-key">1000</span>);
+  <span class="c-key">return</span> [
+    Math.floor(totalSecs / <span class="c-key">60</span>).toString().padStart(<span class="c-key">2</span>, <span class="c-str">'0'</span>),
+    (totalSecs % <span class="c-key">60</span>).toString().padStart(<span class="c-key">2</span>, <span class="c-str">'0'</span>),
+    Math.floor((ms % <span class="c-key">1000</span>) / <span class="c-key">10</span>).toString().padStart(<span class="c-key">2</span>, <span class="c-str">'0'</span>),
+  ].join(<span class="c-str">':'</span>);
+}
+
+<span class="c-key">export function</span> calcAnnualSavings(monthlyIncidents: <span class="c-key">number</span>): <span class="c-key">number</span> {
+  <span class="c-key">return</span> (
+    monthlyIncidents * (HUMAN_COST_PER_INCIDENT - BOB_COST_PER_INCIDENT) * <span class="c-key">12</span>
+  );
+}</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Single source of truth for all financial numbers</span>
+          <span class="impact-chip">🎯 Bobalytics and War Room use same constants</span>
+          <span class="impact-chip">⏱ ~20 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#2563eb;color:#fff">3</div>
+        <div>
+          <div class="task-title"><span class="badge b-blue">Arch</span>Fix <code>err: any</code> typed catch blocks — replace with <code>unknown</code> + type guard</div>
+          <div class="task-file">api/heal/route.ts:64,247 · war-room/page.tsx:861,893,979,1103 · page.tsx:559,810</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>ESLint reports 8 instances of <code>catch (err: any)</code>. The correct TypeScript pattern for catch blocks is <code>unknown</code> + a type guard.</p>
+        <pre><span class="c-cmt">// BEFORE (unsafe — any can propagate silently):</span>
+<span class="c-del">} catch (err: any) {</span>
+<span class="c-del">  return NextResponse.json({ error: err.message }, { status: 500 });</span>
+<span class="c-del">}</span>
+
+<span class="c-cmt">// AFTER (type-safe):</span>
+<span class="c-add">} catch (err: unknown) {</span>
+<span class="c-add">  const msg = err instanceof Error ? err.message : String(err);</span>
+<span class="c-add">  return NextResponse.json({ error: msg }, { status: 500 });</span>
+<span class="c-add">}</span></pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Zero TypeScript <code>any</code> lint errors</span>
+          <span class="impact-chip">🎯 Type-safe error handling</span>
+          <span class="impact-chip">⏱ ~15 min</span>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#2563eb;color:#fff">4</div>
+        <div>
+          <div class="task-title"><span class="badge b-blue">Arch</span>Add a <code>next.config.ts</code> Content Security Policy header</div>
+          <div class="task-file">web/next.config.ts</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>The app loads self-hosted fonts and images. Adding a minimal CSP header prevents XSS, blocks rogue scripts, and shows security awareness to judges who inspect network requests.</p>
+        <pre><span class="c-cmt">// web/next.config.ts</span>
+<span class="c-key">const</span> nextConfig = {
+  output: <span class="c-str">'export'</span>,
+  reactStrictMode: <span class="c-key">false</span>,
+  <span class="c-add">headers: async () =&gt; [{</span>
+    <span class="c-add">source: '/(.*)',</span>
+    <span class="c-add">headers: [</span>
+      <span class="c-add">{ key: 'X-Frame-Options', value: 'SAMEORIGIN' },</span>
+      <span class="c-add">{ key: 'X-Content-Type-Options', value: 'nosniff' },</span>
+      <span class="c-add">{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },</span>
+    ],
+  <span class="c-add">}],</span>
+  experimental: { optimizePackageImports: [<span class="c-str">'lucide-react'</span>, <span class="c-str">'idb'</span>] },
+};</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Security headers in HTTP responses</span>
+          <span class="impact-chip">🎯 Impresses judges who check DevTools → Network</span>
+          <span class="impact-chip">⏱ ~10 min</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+<div class="phase ph-purple">
+  <div class="phase-header">
+    <div class="left">
+      <span class="phase-label">Phase 6</span>
+      <span class="phase-title">🚀 Bonus Features (If Time Allows)</span>
+    </div>
+    <span class="phase-meta">3 ideas · ~2–3 hours total · optional but impressive</span>
+  </div>
+  <div class="phase-body">
+
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#7c3aed;color:#fff">1</div>
+        <div>
+          <div class="task-title"><span class="badge b-purple">Bonus</span>Live Mode / Demo Mode indicator chip in War Room hero</div>
+          <div class="task-file">war-room/page.tsx · hero header section</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>Add a visible indicator that auto-detects whether the app is running in real disk-mutation mode (localhost) or Cloudflare simulation mode. Judges who run it locally will immediately see the proof that it's real.</p>
+        <pre><span class="c-add">// Import DEMO_MODE from demoMode.ts (already available)</span>
+{!DEMO_MODE ? (
+  &lt;span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 font-mono text-[10px] font-bold flex items-center gap-1.5"&gt;
+    &lt;HardDrive className="w-3 h-3" /&gt; LIVE DISK MODE — Real Vitest Execution
+  &lt;/span&gt;
+) : (
+  &lt;span className="px-2.5 py-1 rounded-lg bg-blue-500/15 border border-blue-400/40 text-blue-300 font-mono text-[10px] font-bold flex items-center gap-1.5"&gt;
+    &lt;Cloud className="w-3 h-3" /&gt; CLOUD DEMO MODE — High-Fidelity Simulation
+  &lt;/span&gt;
+)}</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Visual proof of real execution for local judges</span>
+          <span class="impact-chip">🎯 Clear mode labeling removes confusion</span>
+          <span class="impact-chip">⏱ ~15 min</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#7c3aed;color:#fff">2</div>
+        <div>
+          <div class="task-title"><span class="badge b-purple">Bonus</span>Add incident timeline progress bar</div>
+          <div class="task-file">war-room/page.tsx · below the hero header</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>A thin horizontal progress bar showing <strong>Step 1 → 2 → 3 → ✓ RESOLVED</strong> with real-time fill based on <code>step</code> state. Makes the multi-step triage process immediately scannable for judges who don't know what they're looking at.</p>
+        <pre>&lt;div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden"&gt;
+  &lt;div
+    className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-700"
+    style={{ width: `${(step / 3) * 100}%` }}
+  /&gt;
+&lt;/div&gt;
+&lt;div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1"&gt;
+  {['Ingesting Alert', 'Racing Detectives', 'Falsifying Decoys', 'Crown Fix Verified']
+    .map((label, i) =&gt; (
+      &lt;span key={i} className={step &gt;= i ? 'text-emerald-400 font-bold' : ''}&gt;
+        {label}
+      &lt;/span&gt;
+    ))}
+&lt;/div&gt;</pre>
+        <div class="impact">
+          <span class="impact-chip">🎯 Instantly communicates 4-step workflow</span>
+          <span class="impact-chip">⏱ ~20 min</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="task-head">
+        <div class="task-num" style="background:#7c3aed;color:#fff">3</div>
+        <div>
+          <div class="task-title"><span class="badge b-purple">Bonus</span>Add <code>/incidents/[id]</code> dynamic route — deep-dive event timeline per incident</div>
+          <div class="task-file">web/src/app/incidents/[id]/page.tsx (new)</div>
+        </div>
+      </div>
+      <div class="task-body">
+        <p>The master plan specified a per-incident drill-down page but it was never built. Even a simple static version that renders the full 5-Whys, diff, and timeline for a given incident ID would fulfill the plan and provide judges a linkable permalink for each incident.</p>
+        <ul class="checks">
+          <li>Create <code>web/src/app/incidents/[id]/page.tsx</code></li>
+          <li>Read <code>INCIDENT_DATA</code> by ID and render the postmortem + diff</li>
+          <li>URL would be: <code>/incidents/INC-2041</code></li>
+          <li>Update the incidents redirect page to link to these instead of War Room</li>
+        </ul>
+        <div class="impact">
+          <span class="impact-chip">🎯 Fulfills missing plan item</span>
+          <span class="impact-chip">🎯 Linkable permalink for each incident</span>
+          <span class="impact-chip">⏱ ~60 min</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<hr class="div" />
+<h2 style="font-size:15px;font-weight:800;margin-bottom:12px">📅 Execution Roadmap — Priority Order</h2>
+<table class="roadmap">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Task</th>
+      <th>File(s)</th>
+      <th>Time</th>
+      <th>Priority</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>Fix <code>switchIncident</code> + <code>handleLaunchTriageSquad</code> TDZ bugs</td><td>war-room/page.tsx</td><td>15 min</td><td><span class="badge b-red">P0 — NOW</span></td></tr>
+    <tr><td>2</td><td>Fix Autopilot Tour detective reset bug</td><td>war-room/page.tsx</td><td>3 min</td><td><span class="badge b-red">P0 — NOW</span></td></tr>
+    <tr><td>3</td><td>Fix 9 unescaped entities in Matrix page</td><td>matrix/page.tsx</td><td>5 min</td><td><span class="badge b-orange">P1 — Today</span></td></tr>
+    <tr><td>4</td><td>Remove <code>force-static</code> from API routes</td><td>api/heal · api/run-tests</td><td>2 min</td><td><span class="badge b-orange">P1 — Today</span></td></tr>
+    <tr><td>5</td><td>Wire up <code>appMode</code> to visible UI chip</td><td>war-room/page.tsx</td><td>5 min</td><td><span class="badge b-orange">P1 — Today</span></td></tr>
+    <tr><td>6</td><td>Remove 20+ unused icon imports</td><td>5 pages</td><td>8 min</td><td><span class="badge b-orange">P1 — Today</span></td></tr>
+    <tr><td>7</td><td>Audit bob_sessions/*.png for PII</td><td>bob_sessions/</td><td>10 min</td><td><span class="badge b-amber">P2 — Before submit</span></td></tr>
+    <tr><td>8</td><td>Add rate limiting to /api/heal</td><td>api/heal/route.ts</td><td>10 min</td><td><span class="badge b-amber">P2 — Before submit</span></td></tr>
+    <tr><td>9</td><td>Add input whitelist validation to /api/heal</td><td>api/heal/route.ts</td><td>5 min</td><td><span class="badge b-amber">P2 — Before submit</span></td></tr>
+    <tr><td>10</td><td>"Share Demo URL" copy button</td><td>war-room/page.tsx</td><td>15 min</td><td><span class="badge b-green">P3 — Polish</span></td></tr>
+    <tr><td>11</td><td>Keyboard shortcut system (Space, 1–4, R, T)</td><td>war-room/page.tsx</td><td>20 min</td><td><span class="badge b-green">P3 — Polish</span></td></tr>
+    <tr><td>12</td><td>ESC key to close Bobalytics lightbox</td><td>bobalytics/page.tsx</td><td>5 min</td><td><span class="badge b-green">P3 — Polish</span></td></tr>
+    <tr><td>13</td><td>Postmortem tabs mobile overflow fix</td><td>postmortem/page.tsx</td><td>5 min</td><td><span class="badge b-green">P3 — Polish</span></td></tr>
+    <tr><td>14</td><td>Restore resolved incidents from IndexedDB on mount</td><td>war-room/page.tsx</td><td>15 min</td><td><span class="badge b-green">P3 — Polish</span></td></tr>
+    <tr><td>15</td><td>Fix all <code>catch (err: any)</code> → <code>unknown</code></td><td>6 files</td><td>15 min</td><td><span class="badge b-blue">P4 — Quality</span></td></tr>
+    <tr><td>16</td><td>Extract <code>AudioToggle</code> shared component</td><td>components/common/</td><td>20 min</td><td><span class="badge b-blue">P4 — Quality</span></td></tr>
+    <tr><td>17</td><td>Create <code>lib/telemetry.ts</code> constants</td><td>lib/telemetry.ts</td><td>20 min</td><td><span class="badge b-blue">P4 — Quality</span></td></tr>
+    <tr><td>18</td><td>Add security headers to next.config.ts</td><td>next.config.ts</td><td>10 min</td><td><span class="badge b-blue">P4 — Quality</span></td></tr>
+    <tr><td>19</td><td>Live / Demo mode chip in War Room hero</td><td>war-room/page.tsx</td><td>15 min</td><td><span class="badge b-purple">P5 — Bonus</span></td></tr>
+    <tr><td>20</td><td>Incident timeline progress bar</td><td>war-room/page.tsx</td><td>20 min</td><td><span class="badge b-purple">P5 — Bonus</span></td></tr>
+    <tr><td>21</td><td><code>/incidents/[id]</code> dynamic drill-down page</td><td>app/incidents/[id]/</td><td>60 min</td><td><span class="badge b-purple">P5 — Bonus</span></td></tr>
+  </tbody>
+</table>
+
+<p style="font-size:13px;color:#57606a;text-align:center;margin-top:16px">
+  <strong>P0</strong>: Fix before any demo (30 min total)  · 
+  <strong>P1</strong>: Fix today (20 min)  · 
+  <strong>P2</strong>: Before public submission (25 min)  · 
+  <strong>P3–P5</strong>: Polish &amp; features (3–4 hrs)
+</p>
+
+<footer>Made with IBM Bob  ·  MAYDAY Implementation Plan  ·  Team SITA</footer>
+</div>
+</body>
+</html>

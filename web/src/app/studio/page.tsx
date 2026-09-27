@@ -9,7 +9,6 @@ import {
   VolumeX,
   ArrowLeft,
   Flame,
-  FlaskConical,
 } from 'lucide-react';
 import LiveCustomStudio from '../../components/studio/LiveCustomStudio';
 import { callHealAPI } from '../../lib/demoMode';
@@ -38,7 +37,10 @@ function StudioContent() {
   };
 
   useEffect(() => {
-    checkLiveDiskStatus();
+    const timer = setTimeout(() => {
+      void checkLiveDiskStatus();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   return (

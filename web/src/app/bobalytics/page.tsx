@@ -2,19 +2,16 @@
 
 import React, { useState } from 'react';
 import {
-  Coins, 
-  Cpu, 
-  TrendingUp, 
-  DollarSign, 
-  ShieldCheck, 
-  CheckCircle2, 
+  Coins,
+  TrendingUp,
+  ShieldCheck,
   ExternalLink,
   ZoomIn,
   X,
   FileCheck,
-  Zap
 } from 'lucide-react';
 import { sounds } from '../../lib/audio';
+import { HUMAN_COST_PER_INCIDENT, BOB_COST_PER_INCIDENT, calcAnnualSavings } from '../../lib/telemetry';
 
 interface Receipt {
   id: string;
@@ -69,11 +66,17 @@ export default function BobalyticsPage() {
   const [activeReceipt, setActiveReceipt] = useState<Receipt | null>(null);
   const [incidentVolume, setIncidentVolume] = useState<number>(15);
 
-  const humanCostPerIncident = 900; // 3 SREs * 2.5 hrs * $120/hr
-  const bobCostPerIncident = 0.38; // ~0.38 Bobcoins / $0.38 USD
-  const totalHumanCost = incidentVolume * humanCostPerIncident;
-  const totalBobCost = incidentVolume * bobCostPerIncident;
-  const annualSavings = (totalHumanCost - totalBobCost) * 12;
+  // ESC key closes the lightbox
+  React.useEffect(() => {
+    if (!activeReceipt) return;
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setActiveReceipt(null); };
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, [activeReceipt]);
+
+  const totalHumanCost = incidentVolume * HUMAN_COST_PER_INCIDENT;
+  const totalBobCost = incidentVolume * BOB_COST_PER_INCIDENT;
+  const annualSavings = calcAnnualSavings(incidentVolume);
 
   return (
     <main className="p-6 max-w-7xl mx-auto w-full space-y-6">
