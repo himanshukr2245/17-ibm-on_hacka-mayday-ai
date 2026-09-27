@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "npm --prefix web run dev",
     "dev:clean": "npm --prefix web run dev",
-    "build": "npm --prefix web install && npm --prefix web run build:webpack",
+    "build": "npm --prefix web run build:webpack",
     "start": "npm --prefix web run start",
     "test": "npm --prefix targets/shopfront test",
     "check:all": "node scripts/check-art-refs.mjs && node scripts/check-tokens.mjs && node scripts/check-targets.mjs && npm run build",
