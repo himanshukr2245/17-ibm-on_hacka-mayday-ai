@@ -92,38 +92,38 @@ export default function LandingCommandPortal() {
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-sans selection:bg-red-500/30 selection:text-white pb-20">
       {/* ========================================================================= */}
-      {/* 🚨 TOP RIBBON: DUAL-MODE STATUS TELEMETRY (DEMO VS REAL HOST DISK MODE)   */}
+      {/* 🚨 TOP RIBBON: VIBRANT EMERGENCY RED CRISIS STATUS TELEMETRY              */}
       {/* ========================================================================= */}
-      <div className="bg-[#0b0c14]/90 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono shadow-xl relative z-40">
+      <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-mono text-[11px] font-black tracking-wide border-b border-red-400/50 shadow-xl shadow-red-950/40 px-3 sm:px-6 py-2 flex flex-col sm:flex-row items-center justify-between gap-2.5 relative z-40">
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-red-500/15 border border-red-500/35 text-red-400 text-[10px] font-bold">
+          <div className="flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-black/35 border border-white/30 text-white text-[10px] font-black">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-85"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
             </span>
-            <span>3:00 AM INCIDENT SCENARIO</span>
+            <span>🚨 3:00 AM INCIDENT OUTAGE</span>
           </div>
 
-          <span className="text-slate-300 text-[11px] hidden sm:inline">
+          <span className="text-white/95 text-[11px] font-bold tracking-wider hidden sm:inline uppercase">
             Autonomous Incident Commander Active &bull; Zero Tired Humans Paged
           </span>
         </div>
 
-        {/* Smriti-Style Mode Switcher Pill */}
-        <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800 shadow-inner">
+        {/* High-Contrast Obsidian Glass Mode Switcher */}
+        <div className="flex items-center gap-1 bg-black/45 backdrop-blur-md p-1 rounded-xl border border-white/25 shadow-2xl">
           <button
             type="button"
             onClick={() => {
               setActiveMode('DEMO');
               if (soundEnabled) sounds.playTerminalClick();
             }}
-            className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-[10px] font-mono font-black transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
               activeMode === 'DEMO'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/20'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/40 border border-amber-300'
+                : 'text-white/80 hover:text-white hover:bg-white/10'
             }`}
           >
-            <Sparkles className="w-3 h-3 fill-current text-amber-400" />
+            <Sparkles className={`w-3 h-3 ${activeMode === 'DEMO' ? 'fill-current text-slate-950' : 'text-amber-300'}`} />
             <span>🎮 Golden Demo Mode</span>
           </button>
 
@@ -133,13 +133,13 @@ export default function LandingCommandPortal() {
               setActiveMode('REAL');
               if (soundEnabled) sounds.playRadarPing();
             }}
-            className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-[10px] font-mono font-black transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
               activeMode === 'REAL'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-500/20'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-emerald-400 text-slate-950 shadow-md shadow-emerald-400/40 border border-emerald-300'
+                : 'text-white/80 hover:text-white hover:bg-white/10'
             }`}
           >
-            <Wrench className="w-3 h-3 text-emerald-400" />
+            <Wrench className={`w-3 h-3 ${activeMode === 'REAL' ? 'text-slate-950' : 'text-emerald-300'}`} />
             <span>⚡ Real Host Disk Mode</span>
           </button>
         </div>
