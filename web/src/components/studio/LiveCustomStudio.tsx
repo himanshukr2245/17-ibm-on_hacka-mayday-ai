@@ -491,7 +491,15 @@ export default function LiveCustomStudio({
         {/* Sub-Tab Selector */}
         <div className="flex flex-wrap items-center bg-slate-900 border border-slate-800 rounded-xl p-1 gap-1">
           <button
-            onClick={() => { setActiveTab('chaos'); if (soundEnabled) sounds.playTerminalClick(); }}
+            onClick={() => {
+              setActiveTab('chaos');
+              if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', 'chaos');
+                window.history.replaceState({}, '', url.toString());
+              }
+              if (soundEnabled) sounds.playTerminalClick();
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition ${
               activeTab === 'chaos'
                 ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
@@ -503,7 +511,15 @@ export default function LiveCustomStudio({
           </button>
 
           <button
-            onClick={() => { setActiveTab('sandbox'); if (soundEnabled) sounds.playTerminalClick(); }}
+            onClick={() => {
+              setActiveTab('sandbox');
+              if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', 'sandbox');
+                window.history.replaceState({}, '', url.toString());
+              }
+              if (soundEnabled) sounds.playTerminalClick();
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition ${
               activeTab === 'sandbox'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
@@ -515,19 +531,38 @@ export default function LiveCustomStudio({
           </button>
 
           <button
-            onClick={() => { setActiveTab('custom-trace'); if (soundEnabled) sounds.playTerminalClick(); }}
+            onClick={() => {
+              setActiveTab('custom-trace');
+              if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', 'custom-trace');
+                window.history.replaceState({}, '', url.toString());
+              }
+              if (soundEnabled) sounds.playTerminalClick();
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition ${
               activeTab === 'custom-trace'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30 ring-1 ring-purple-400'
+                : 'text-purple-300 bg-purple-950/20 border border-purple-800/40 hover:text-white hover:bg-purple-900/40'
             }`}
           >
-            <Code2 className="w-3.5 h-3.5" />
-            <span>Custom Trace</span>
+            <Code2 className="w-3.5 h-3.5 text-purple-400" />
+            <span>Custom Trace (Live AI)</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+              Qwen
+            </span>
           </button>
 
           <button
-            onClick={() => { setActiveTab('webhook'); if (soundEnabled) sounds.playTerminalClick(); }}
+            onClick={() => {
+              setActiveTab('webhook');
+              if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', 'webhook');
+                window.history.replaceState({}, '', url.toString());
+              }
+              if (soundEnabled) sounds.playTerminalClick();
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition ${
               activeTab === 'webhook'
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
