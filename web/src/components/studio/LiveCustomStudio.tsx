@@ -9,24 +9,15 @@ import {
   Sparkles,
   Bug,
   CheckCircle2,
-  XCircle,
   Copy,
   Check,
   Send,
-  Cpu,
-  Layers,
-  FileCode,
   HardDrive,
-  Activity,
-  AlertTriangle,
   Code2,
-  RefreshCw,
   Zap,
   ArrowRight,
-  ExternalLink,
   FlaskConical,
   Flame,
-  Radio,
 } from 'lucide-react';
 import { callHealAPI, callRunTestsAPI } from '../../lib/demoMode';
 import { sounds } from '../../lib/audio';
@@ -294,7 +285,7 @@ export default function LiveCustomStudio({
       const hasTimeout = customTrace.includes('Timeout') || customTrace.includes('ECONN');
       const hasRace = customTrace.includes('AssertionError') || customTrace.includes('stock');
 
-      let errorType = hasTypeError ? 'Contract Drift / Missing Property' : hasTimeout ? 'Upstream Saturation / Timeout' : 'Concurrency Race Condition';
+      const errorType = hasTypeError ? 'Contract Drift / Missing Property' : hasTimeout ? 'Upstream Saturation / Timeout' : 'Concurrency Race Condition';
       let file = 'src/payment/adapter.ts';
       let line = 37;
 

@@ -2456,7 +2456,7 @@ ${currentIncident.postmortem.rejectionReason}
                     <div className="pt-2 text-blue-400 flex items-center gap-2">
                       <Zap className="w-3.5 h-3.5" />
                       <span>
-                        Click <strong>"Run Live Vitest"</strong> or <strong>"Break File on Disk"</strong> above to execute tests on your computer!
+                        Click <strong>&quot;Run Live Vitest&quot;</strong> or <strong>&quot;Break File on Disk&quot;</strong> above to execute tests on your computer!
                       </span>
                     </div>
                   </div>

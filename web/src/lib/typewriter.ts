@@ -6,15 +6,25 @@ export function useTypewriter(text: string, speedMs = 18): string {
   const [displayed, setDisplayed] = useState('');
 
   useEffect(() => {
-    setDisplayed('');
-    if (!text) return;
+    if (!text) {
+      setDisplayed('');
+      return;
+    }
     let i = 0;
+    const timer = setTimeout(() => {
+      setDisplayed(text.slice(0, 1));
+    }, 0);
+
     const interval = setInterval(() => {
-      setDisplayed(text.slice(0, i + 1));
       i++;
+      setDisplayed(text.slice(0, i + 1));
       if (i >= text.length) clearInterval(interval);
     }, speedMs);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
   }, [text, speedMs]);
 
   return displayed;

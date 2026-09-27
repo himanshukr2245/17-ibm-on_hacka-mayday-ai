@@ -5,15 +5,8 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
-  Radio,
-  Cpu,
-  Layers,
-  GitPullRequest,
   CheckCircle2,
   XCircle,
-  AlertTriangle,
-  ArrowRight,
-  ShieldCheck,
   Zap,
 } from 'lucide-react';
 
