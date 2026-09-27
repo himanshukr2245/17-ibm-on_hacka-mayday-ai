@@ -98,8 +98,8 @@ export default function Navbar() {
     : systemHealth === 'SEV-1'
     ? {
         label: 'SEV-1 ACTIVE',
-        badgeCls: 'bg-red-500/15 border-red-500/40 text-red-400',
-        dotCls: 'bg-red-500 animate-ping shadow-red-500/50',
+        badgeCls: 'bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white border-red-400/80 shadow-lg shadow-red-600/35 font-black',
+        dotCls: 'bg-white animate-ping',
       }
     : {
         label: 'TELEMETRY LIVE',
@@ -202,7 +202,7 @@ export default function Navbar() {
           </div>
 
           {/* Live UTC Monospace Clock */}
-          <div className="hidden sm:flex items-center gap-1.5 font-mono text-[11px] text-slate-300 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-lg shadow-inner">
+          <div className="hidden xl:flex items-center gap-1.5 font-mono text-[11px] text-slate-300 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-lg shadow-inner">
             <Clock className="w-3 h-3 text-cyan-400" />
             <span>{time || '00:00:00 UTC'}</span>
           </div>

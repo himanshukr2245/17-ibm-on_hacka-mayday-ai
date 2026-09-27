@@ -171,7 +171,7 @@ export default function LandingCommandPortal() {
             {/* Main Action CTAs */}
             <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
               <Link
-                href="/war-room"
+                href="/war-room?autopilot=true"
                 prefetch={false}
                 className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 hover:from-red-500 hover:to-rose-500 text-white font-mono text-xs font-bold flex items-center gap-2 shadow-xl shadow-red-600/30 transition hover:scale-[1.02] active:scale-[0.98]"
               >

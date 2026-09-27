@@ -785,7 +785,12 @@ export default function MaydayWarRoom() {
       if (modeParam === 'real' || modeParam === 'REAL') {
         setAppMode('REAL');
       }
-      if (params.get('autoplay') === 'true') {
+      if (params.get('autopilot') === 'true' || params.get('guided') === 'true') {
+        const id = setTimeout(() => {
+          startAutopilotTour();
+        }, 600);
+        timeoutRefs.current.push(id);
+      } else if (params.get('autoplay') === 'true') {
         const id = setTimeout(() => {
           setSpeed(4);
           setTimeout(() => handleLaunchTriageSquad(), 200);
@@ -1205,7 +1210,7 @@ ${currentIncident.postmortem.rejectionReason}
       {/* ========================================================================= */}
 
       {/* Top Emergency Siren Marquee */}
-      <div className="bg-gradient-to-r from-red-650 via-red-600 to-rose-700 text-white font-mono text-[11px] font-black tracking-widest uppercase px-4 py-1.5 flex items-center justify-between shadow-xl shadow-red-900/30 overflow-hidden relative border-b border-red-500/40">
+      <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-mono text-[11px] font-black tracking-widest uppercase px-4 py-2 flex items-center justify-between shadow-xl shadow-red-900/40 overflow-hidden relative border-b border-red-400/50">
         <div className="flex items-center gap-3 animate-pulse">
           <span className="flex h-2.5 w-2.5 relative">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -1334,14 +1339,14 @@ ${currentIncident.postmortem.rejectionReason}
         {/* Global Action Bar: Autopilot Tour + Controls */}
         <div className="max-w-7xl mx-auto mt-6 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 flex-wrap">
-            {/* 🚀 30-Second Autopilot Tour Button */}
+            {/* 🚀 60-Second Guided Autopilot Tour Button */}
             <button
               onClick={startAutopilotTour}
-              className="px-4 py-2.5 rounded-xl font-bold text-xs font-mono flex items-center gap-2 transition shadow-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 shadow-purple-600/30 hover:scale-[1.02] active:scale-[0.98]"
-              title="Runs an automated 30-second guided tour showing the entire self-healing workflow"
+              className="px-4 py-2.5 rounded-xl font-bold text-xs font-mono flex items-center gap-2 transition shadow-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 shadow-purple-600/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              title="Runs an automated 60-second guided tour showing the entire self-healing workflow"
             >
               <Sparkles className="w-4 h-4 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
-              <span>🚀 30-Second Autopilot Tour</span>
+              <span>⚡ 60-Second Guided Auto-Pilot Tour</span>
             </button>
 
             {/* Launch Triage Squad Playback */}

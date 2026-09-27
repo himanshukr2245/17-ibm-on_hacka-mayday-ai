@@ -176,6 +176,19 @@ export default function PostmortemPage() {
     window.print();
   };
 
+  const handleDownloadMarkdown = () => {
+    sounds.playGreenChime();
+    const blob = new Blob([activePostmortem.markdownContent], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${activePostmortem.id.toLowerCase()}-postmortem.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <main className="p-6 max-w-7xl mx-auto w-full space-y-6">
       {/* Header */}
@@ -192,10 +205,19 @@ export default function PostmortemPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleDownloadMarkdown}
+            className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-blue-600/20 transition cursor-pointer"
+            title="Download full postmortem as a markdown file"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download .md</span>
+          </button>
+
           <button
             onClick={handleCopy}
-            className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-mono text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition"
+            className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-mono text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition cursor-pointer"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'Copied Markdown!' : 'Copy Markdown'}</span>
@@ -203,7 +225,7 @@ export default function PostmortemPage() {
 
           <button
             onClick={handlePrint}
-            className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-mono text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition"
+            className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-mono text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print PDF Brief</span>
